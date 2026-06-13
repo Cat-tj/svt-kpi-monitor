@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-surface-secondary text-gray-900 antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .gradient-brand {
+    background: linear-gradient(135deg, #4c6ef5 0%, #7c3aed 100%);
+  }
+
+  .glass {
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.85);
+  }
+}
