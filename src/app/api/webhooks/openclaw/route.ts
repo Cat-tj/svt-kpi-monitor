@@ -10,6 +10,9 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
 import { createHmac } from "crypto";
 
+// Force dynamic rendering
+export const dynamic = "force-dynamic";
+
 // Verify the webhook signature from OpenClaw
 function verifySignature(payload: string, signature: string): boolean {
   const secret = process.env.OPENCLAW_API_SECRET;

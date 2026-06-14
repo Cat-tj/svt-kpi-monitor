@@ -15,6 +15,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { createHmac } from "crypto";
 
+// Force dynamic rendering
+export const dynamic = "force-dynamic";
+
 // Validate API key
 async function validateApiKey(apiKey: string): Promise<boolean> {
   if (!apiKey) return false;
