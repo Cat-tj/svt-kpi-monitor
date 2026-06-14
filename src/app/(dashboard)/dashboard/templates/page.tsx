@@ -14,7 +14,7 @@ interface KpiTemplate {
   name: string;
   description: string | null;
   category: string | null;
-  kpis: any[];
+  kpi_data: any[];
   created_at: string;
 }
 
@@ -87,7 +87,7 @@ function TemplatesContent() {
     setApplying(true);
 
     const supabase = createClient();
-    const kpisToInsert = (applyingTemplate.kpis || []).map((kpi: any) => ({
+    const kpisToInsert = (applyingTemplate.kpi_data || []).map((kpi: any) => ({
       name: kpi.name,
       description: kpi.description || null,
       unit: kpi.unit || "number",
@@ -182,7 +182,7 @@ function TemplatesContent() {
                           <p className="text-xs text-gray-500 mt-1">{template.description}</p>
                         )}
                         <p className="text-[10px] text-gray-400 mt-2">
-                          {Array.isArray(template.kpis) ? template.kpis.length : 0} KPIs included
+                          {Array.isArray(template.kpi_data) ? template.kpi_data.length : 0} KPIs included
                         </p>
                       </div>
                     </div>
@@ -205,7 +205,7 @@ function TemplatesContent() {
         open={confirmOpen}
         title="Apply Template"
         message={`This will create ${
-          applyingTemplate?.kpis?.length || 0
+          applyingTemplate?.kpi_data?.length || 0
         } KPIs from "${applyingTemplate?.name || ""}" for the selected department. Continue?`}
         confirmLabel="Apply"
         cancelLabel="Cancel"
@@ -218,3 +218,4 @@ function TemplatesContent() {
     </div>
   );
 }
+
