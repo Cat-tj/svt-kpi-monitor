@@ -318,7 +318,7 @@ function CalendarView() {
         map.set(key, arr);
       }
     }
-    for (const arr of map.values()) {
+    for (const arr of Array.from(map.values())) {
       arr.sort((a, b) => a.startKey.localeCompare(b.startKey) || a.name.localeCompare(b.name));
     }
     return map;
