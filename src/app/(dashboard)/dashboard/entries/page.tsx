@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, CheckCircle2, XCircle, Plus, Loader2, MessageSquare } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, Plus, Loader2, MessageSquare, Paperclip } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -22,6 +22,7 @@ interface Entry {
   created_at: string;
   kpi: { id: string; name: string; target_value: number; unit: string | null; department_id: string; department: { name: string } | null } | null;
   submitter: { full_name: string; email: string } | null;
+  attachments?: { id: string; file_name: string; file_url: string }[];
 }
 
 export default function EntriesPage() {
@@ -49,7 +50,7 @@ function EntriesContent() {
 
     let query = supabase
       .from("kpi_entries")
-      .select("*, kpi:kpis(id, name, target_value, unit, department_id, department:departments(name)), submitter:profiles!submitted_by(full_name, email)")
+      .select("*, kpi:kpis(id, name, target_value, unit, department_id, department:departments(name)), submitter:profiles!submitted_by(full_name, email), attachments(id, file_name, file_url)")
       .order("created_at", { ascending: false })
       .limit(100);
 
@@ -156,6 +157,22 @@ function EntriesContent() {
                       </p>
                       <p className="text-xs text-gray-500 mt-1">Period: {entry.period_start} → {entry.period_end} · {new Date(entry.created_at).toLocaleDateString("id-ID")}</p>
                       {entry.notes && <p className="text-xs text-gray-500 mt-1.5 italic border-l-2 border-gray-200 pl-2">{entry.notes}</p>}
+                      {entry.attachments && entry.attachments.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          {entry.attachments.map((att) => (
+                            <a
+                              key={att.id}
+                              href={att.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 rounded-md bg-brand-50 border border-brand-200 px-2 py-1 text-[11px] font-medium text-brand-700 hover:bg-brand-100 transition-colors"
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              {att.file_name.length > 24 ? att.file_name.slice(0, 24) + "..." : att.file_name}
+                            </a>
+                          ))}
+                        </div>
+                      )}
                       {entry.review_notes && <p className="text-xs text-amber-700 mt-1.5 bg-amber-50 rounded px-2 py-1">Review: {entry.review_notes}</p>}
                     </div>
                   </div>

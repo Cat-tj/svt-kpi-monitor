@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
-import { ClipboardCheck, Calendar, Hash, FileText, Send, Loader2 } from "lucide-react";
+import { ClipboardCheck, Calendar, Hash, FileText, Send, Loader2, Paperclip, X } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
@@ -27,6 +27,7 @@ export default function NewEntryPage() {
   const [endDate, setEndDate] = useState("");
   const [actualValue, setActualValue] = useState("");
   const [notes, setNotes] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -92,14 +93,14 @@ export default function NewEntryPage() {
     setLoading(true);
     const supabase = createClient();
 
-    const { error: insertError } = await supabase.from("kpi_entries").insert({
+    const { data: insertData, error: insertError } = await supabase.from("kpi_entries").insert({
       kpi_id: selectedKpi,
       submitted_by: user.id,
       period_start: startDate,
       period_end: endDate,
       actual_value: numValue,
       notes: notes || null,
-    } as any);
+    } as any).select().single();
 
     if (insertError) {
       // Validation #20: friendly duplicate error
@@ -112,8 +113,30 @@ export default function NewEntryPage() {
       return;
     }
 
+    // Upload attachments if any
+    const entryId = (insertData as any)?.id;
+    if (entryId && files.length > 0) {
+      for (const file of files) {
+        const path = `${user.id}/${entryId}/${Date.now()}_${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from("kpi-evidence")
+          .upload(path, file, { upsert: false });
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from("kpi-evidence").getPublicUrl(path);
+          await supabase.from("attachments").insert({
+            entry_id: entryId,
+            file_name: file.name,
+            file_url: urlData.publicUrl,
+            file_size: file.size,
+            uploaded_by: user.id,
+          } as any);
+        }
+      }
+    }
+
     toast("Entry submitted successfully! Waiting for approval.", "success");
-    setSelectedKpi(""); setStartDate(""); setEndDate(""); setActualValue(""); setNotes("");
+    setSelectedKpi(""); setStartDate(""); setEndDate(""); setActualValue(""); setNotes(""); setFiles([]);
     setLoading(false);
   }
 
@@ -183,6 +206,42 @@ export default function NewEntryPage() {
             Notes (optional)
           </label>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add context..." rows={3} className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 resize-none" />
+        </div>
+
+        {/* Evidence Attachments */}
+        <div data-animate="field" className="rounded-xl border border-border bg-surface p-5 shadow-card">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+            <Paperclip className="h-4 w-4 text-gray-400" />
+            Evidence / Proof (optional)
+          </label>
+          <input
+            type="file"
+            multiple
+            accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf,.xlsx,.xls,.doc,.docx"
+            onChange={(e) => {
+              const selected = Array.from(e.target.files || []);
+              setFiles((prev) => [...prev, ...selected]);
+              e.target.value = "";
+            }}
+            className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100"
+          />
+          <p className="text-xs text-gray-400 mt-2">Upload screenshots, documents, or photos as proof. Max 10MB each (PNG, JPG, PDF, Excel, Word).</p>
+          {files.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {files.map((file, idx) => (
+                <div key={idx} className="flex items-center justify-between rounded-lg border border-gray-100 px-3 py-2 bg-gray-50">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Paperclip className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                    <span className="text-xs text-gray-700 truncate">{file.name}</span>
+                    <span className="text-[10px] text-gray-400 flex-shrink-0">({(file.size / 1024).toFixed(0)} KB)</span>
+                  </div>
+                  <button type="button" onClick={() => setFiles((prev) => prev.filter((_, i) => i !== idx))} className="text-gray-400 hover:text-red-500">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {error && (

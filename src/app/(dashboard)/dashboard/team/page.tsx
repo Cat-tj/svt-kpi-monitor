@@ -2,10 +2,12 @@
 
 import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
-import { Users, Shield, Loader2, Plus, X } from "lucide-react";
+import { Users, Shield, Loader2, Plus, X, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Member {
   id: string;
@@ -30,11 +32,13 @@ const roleConfig: Record<string, { label: string; color: string; bg: string }> =
 
 export default function TeamPage() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const { toast } = useToast();
   const [members, setMembers] = useState<Member[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInvite, setShowInvite] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
 
   // Invite form
   const [invEmail, setInvEmail] = useState("");
@@ -99,6 +103,23 @@ export default function TeamPage() {
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 text-brand-500 animate-spin" /></div>;
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    const res = await fetch("/api/admin/delete-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: deleteTarget.id, hardDelete: true }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      toast(`${deleteTarget.full_name} removed`, "success");
+      await loadData();
+    } else {
+      toast(data.error || "Failed to delete user", "error");
+    }
+    setDeleteTarget(null);
   }
 
   return (
@@ -173,6 +194,7 @@ export default function TeamPage() {
               <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase">Role</th>
               <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase">Department</th>
               <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase">Joined</th>
+              {isAdmin && <th className="px-5 py-3"></th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -200,12 +222,31 @@ export default function TeamPage() {
                   </td>
                   <td className="px-5 py-3.5 text-sm text-gray-600">{member.department?.name || "—"}</td>
                   <td className="px-5 py-3.5 text-xs text-gray-500">{new Date(member.created_at).toLocaleDateString("id-ID")}</td>
+                  {isAdmin && (
+                    <td className="px-5 py-3.5">
+                      {member.id !== user?.id && (
+                        <button onClick={() => setDeleteTarget(member)} className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Remove Team Member"
+        message={`Permanently remove ${deleteTarget?.full_name} (${deleteTarget?.email})? Their account and access will be deleted. This cannot be undone.`}
+        confirmLabel="Remove"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
