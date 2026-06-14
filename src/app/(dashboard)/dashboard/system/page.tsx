@@ -19,7 +19,8 @@ interface ActivityEntry {
   id: string;
   user_id: string;
   action: string;
-  details: string | null;
+  metadata: Record<string, unknown> | null;
+  target_type: string | null;
   created_at: string;
 }
 
@@ -146,9 +147,11 @@ function SystemContent() {
               >
                 <div className="mt-0.5 h-2 w-2 rounded-full bg-brand-400 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-700 font-medium">{activity.action}</p>
-                  {activity.details && (
-                    <p className="text-xs text-gray-500 mt-0.5 truncate">{activity.details}</p>
+                  <p className="text-sm text-gray-700 font-medium capitalize">{activity.action.replace(/_/g, " ")}</p>
+                  {activity.metadata && (
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">
+                      {Object.entries(activity.metadata).map(([k, v]) => `${k}: ${v}`).join(" · ")}
+                    </p>
                   )}
                 </div>
                 <span className="text-[10px] text-gray-400 flex-shrink-0">

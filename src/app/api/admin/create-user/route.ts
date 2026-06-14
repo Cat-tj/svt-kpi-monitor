@@ -104,9 +104,9 @@ export async function POST(request: NextRequest) {
     await adminClient.from("activity_log").insert({
       user_id: currentUser.id,
       action: "created_user",
-      details: `Created user ${full_name} (${email}) with role ${role}`,
-      entity_type: "profile",
-      entity_id: newUser.user.id,
+      target_type: "profile",
+      target_id: newUser.user.id,
+      metadata: { full_name, email, role },
     });
 
     return NextResponse.json({

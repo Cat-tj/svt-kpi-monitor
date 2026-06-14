@@ -15,7 +15,7 @@ interface ArchivedKpi {
   description: string | null;
   unit: string;
   target_value: number;
-  frequency: string;
+  timeframe: string;
   department_id: string | null;
   is_active: boolean;
   created_at: string;
@@ -152,7 +152,7 @@ function ArchiveContent() {
                     <td className="px-5 py-3 text-sm text-gray-600">{kpi.target_value}</td>
                     <td className="px-5 py-3">
                       <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 capitalize">
-                        {kpi.frequency}
+                        {kpi.timeframe}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-xs text-gray-400">

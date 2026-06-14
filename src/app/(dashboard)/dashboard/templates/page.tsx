@@ -92,8 +92,10 @@ function TemplatesContent() {
       description: kpi.description || null,
       unit: kpi.unit || "number",
       target_value: kpi.target_value || 0,
+      weight: kpi.weight || 10,
+      type: kpi.type || "numerical",
       department_id: selectedDept,
-      frequency: kpi.frequency || "monthly",
+      timeframe: kpi.timeframe || "monthly",
       is_active: true,
     }));
 
