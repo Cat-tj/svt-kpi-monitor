@@ -30,8 +30,8 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    // Hard redirect to ensure middleware picks up the new session
+    window.location.href = "/dashboard";
   }
 
   return (
