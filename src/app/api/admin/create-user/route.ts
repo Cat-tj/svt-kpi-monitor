@@ -1,7 +1,7 @@
 /**
  * Admin API: Create new user
  * POST /api/admin/create-user
- * Creates a user in Supabase Auth + assigns role/department in profiles
+ * Creates a user in Supabase Auth + creates profile with role/department
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
@@ -30,20 +30,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check role using service client
+    // Service role client (bypasses RLS)
     const adminClient = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { cookies: { getAll() { return []; }, setAll() {} } }
     );
 
-    const { data: profile } = await adminClient
+    // Verify caller is admin
+    const { data: callerProfile } = await adminClient
       .from("profiles")
       .select("role")
       .eq("id", currentUser.id)
       .single();
 
-    if (!profile || profile.role !== "admin") {
+    if (!callerProfile || callerProfile.role !== "admin") {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
@@ -55,7 +56,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields: email, password, full_name, role" }, { status: 400 });
     }
 
-    // Create user via Admin Auth API
+    if (password.length < 6) {
+      return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
+    }
+
+    // Step 1: Create user in Supabase Auth
     const { data: newUser, error: authError } = await adminClient.auth.admin.createUser({
       email,
       password,
@@ -67,29 +72,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: authError.message }, { status: 400 });
     }
 
-    // Update profile with role and department (trigger creates basic profile)
-    // Wait a moment for trigger to fire, then update
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // Step 2: Wait briefly for trigger to potentially create profile
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
-    const { error: profileError } = await adminClient
+    // Step 3: Force upsert profile with correct role and department
+    // This handles both cases: trigger created it (we update), or trigger failed (we insert)
+    const { error: upsertError } = await adminClient
       .from("profiles")
-      .update({
-        role,
-        department_id: department_id || null,
-        full_name,
-      })
-      .eq("id", newUser.user.id);
+      .upsert(
+        {
+          id: newUser.user.id,
+          full_name,
+          email,
+          role,
+          department_id: department_id || null,
+          is_active: true,
+        },
+        { onConflict: "id" }
+      );
 
-    // If trigger didn't fire (was dropped), insert profile directly
-    if (profileError) {
-      await adminClient.from("profiles").upsert({
-        id: newUser.user.id,
-        full_name,
-        email,
-        role,
-        department_id: department_id || null,
-      } as any);
+    if (upsertError) {
+      console.error("[Create User] Profile upsert failed:", upsertError);
+      // User was created in auth but profile failed - try to clean up
+      // Don't delete the auth user, just report the error
+      return NextResponse.json({
+        error: `User auth created but profile setup failed: ${upsertError.message}. Please update the user's profile manually.`,
+      }, { status: 500 });
     }
+
+    // Step 4: Log the activity
+    await adminClient.from("activity_log").insert({
+      user_id: currentUser.id,
+      action: "created_user",
+      details: `Created user ${full_name} (${email}) with role ${role}`,
+      entity_type: "profile",
+      entity_id: newUser.user.id,
+    });
 
     return NextResponse.json({
       success: true,
@@ -98,6 +116,7 @@ export async function POST(request: NextRequest) {
         email: newUser.user.email,
         full_name,
         role,
+        department_id: department_id || null,
       },
     }, { status: 201 });
 
