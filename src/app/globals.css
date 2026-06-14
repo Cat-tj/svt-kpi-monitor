@@ -11,6 +11,30 @@
     @apply bg-surface-secondary text-gray-900 antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+
+  /* Dark mode overrides */
+  .dark body,
+  .dark {
+    --tw-bg-opacity: 1;
+    color-scheme: dark;
+  }
+
+  .dark .bg-surface { background-color: #1a1b1e; }
+  .dark .bg-surface-secondary { background-color: #141517; }
+  .dark .bg-surface-tertiary { background-color: #25262b; }
+  .dark .border-border { border-color: #2c2e33; }
+  .dark .text-gray-900 { color: #f1f3f5; }
+  .dark .text-gray-800 { color: #dee2e6; }
+  .dark .text-gray-700 { color: #ced4da; }
+  .dark .text-gray-600 { color: #adb5bd; }
+  .dark .text-gray-500 { color: #868e96; }
+  .dark .text-gray-400 { color: #495057; }
+  .dark .bg-gray-50 { background-color: #25262b; }
+  .dark .bg-gray-100 { background-color: #2c2e33; }
+  .dark .hover\:bg-gray-50:hover { background-color: #25262b; }
+  .dark .border-gray-100 { border-color: #2c2e33; }
+  .dark .border-gray-200 { border-color: #373a40; }
+  .dark input, .dark select, .dark textarea { background-color: #25262b; border-color: #373a40; color: #f1f3f5; }
 }
 
 @layer utilities {
