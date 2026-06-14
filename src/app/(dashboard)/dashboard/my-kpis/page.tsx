@@ -1,115 +1,100 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
 import Link from "next/link";
 import {
   Target,
   TrendingUp,
-  TrendingDown,
   Clock,
   CheckCircle2,
   PlusCircle,
-  AlertTriangle,
+  XCircle,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import { createClient } from "@/lib/supabase/client";
 
-// Mock: KPIs assigned to the current staff member
-const myKpis = [
-  {
-    id: "1",
-    name: "Sprint Velocity",
-    department: "Engineering",
-    target: 50,
-    actual: 42,
-    unit: "points",
-    timeframe: "Weekly",
-    deadline: "Jun 15, 2026",
-    lastSubmission: "Jun 8, 2026",
-    status: "on_track" as const,
-  },
-  {
-    id: "2",
-    name: "Code Review Turnaround",
-    department: "Engineering",
-    target: 24,
-    actual: 18,
-    unit: "hours",
-    timeframe: "Weekly",
-    deadline: "Jun 15, 2026",
-    lastSubmission: "Jun 8, 2026",
-    status: "exceeding" as const,
-  },
-  {
-    id: "3",
-    name: "Bug Resolution Rate",
-    department: "Engineering",
-    target: 90,
-    actual: 78,
-    unit: "%",
-    timeframe: "Monthly",
-    deadline: "Jun 30, 2026",
-    lastSubmission: "May 31, 2026",
-    status: "at_risk" as const,
-  },
-  {
-    id: "4",
-    name: "Documentation Coverage",
-    department: "Engineering",
-    target: 80,
-    actual: 65,
-    unit: "%",
-    timeframe: "Monthly",
-    deadline: "Jun 30, 2026",
-    lastSubmission: null,
-    status: "behind" as const,
-  },
-];
+interface KpiWithEntries {
+  id: string;
+  name: string;
+  type: string;
+  timeframe: string;
+  target_value: number;
+  unit: string | null;
+  department: { name: string } | null;
+}
 
-const myRecentEntries = [
-  { id: "1", kpi: "Sprint Velocity", value: "42 points", period: "Jun 2-8", status: "approved" as const, date: "Jun 9" },
-  { id: "2", kpi: "Code Review Turnaround", value: "18 hours", period: "Jun 2-8", status: "approved" as const, date: "Jun 9" },
-  { id: "3", kpi: "Bug Resolution Rate", value: "78%", period: "May 2026", status: "pending" as const, date: "Jun 1" },
-  { id: "4", kpi: "Sprint Velocity", value: "45 points", period: "May 26 - Jun 1", status: "approved" as const, date: "Jun 2" },
-];
-
-const statusConfig = {
-  exceeding: { label: "Exceeding", color: "text-emerald-600", bg: "bg-emerald-50 border-emerald-200", icon: TrendingUp },
-  on_track: { label: "On Track", color: "text-blue-600", bg: "bg-blue-50 border-blue-200", icon: Target },
-  at_risk: { label: "At Risk", color: "text-amber-600", bg: "bg-amber-50 border-amber-200", icon: AlertTriangle },
-  behind: { label: "Behind", color: "text-red-600", bg: "bg-red-50 border-red-200", icon: TrendingDown },
-};
-
-const entryStatusConfig = {
-  approved: { label: "Approved", color: "text-emerald-600", bg: "bg-emerald-50" },
-  pending: { label: "Pending", color: "text-amber-600", bg: "bg-amber-50" },
-  rejected: { label: "Rejected", color: "text-red-600", bg: "bg-red-50" },
-};
+interface MyEntry {
+  id: string;
+  actual_value: number;
+  period_start: string;
+  period_end: string;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  kpi: { name: string; target_value: number; unit: string | null } | null;
+}
 
 export default function MyKpisPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
+  const [kpis, setKpis] = useState<KpiWithEntries[]>([]);
+  const [entries, setEntries] = useState<MyEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    async function loadData() {
+      if (!user) return;
+      const supabase = createClient();
+
+      // Load KPIs for user's department (or all if admin)
+      const { data: kpiData } = await supabase
+        .from("kpis")
+        .select("id, name, type, timeframe, target_value, unit, department:departments(name)")
+        .eq("is_active", true)
+        .order("name");
+
+      if (kpiData) setKpis(kpiData as unknown as KpiWithEntries[]);
+
+      // Load user's own entries
+      const { data: entryData } = await supabase
+        .from("kpi_entries")
+        .select("id, actual_value, period_start, period_end, status, notes, created_at, kpi:kpis(name, target_value, unit)")
+        .eq("submitted_by", user.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (entryData) setEntries(entryData as unknown as MyEntry[]);
+      setLoading(false);
+    }
+
+    loadData();
+  }, [user]);
+
+  useEffect(() => {
+    if (loading) return;
     const ctx = gsap.context(() => {
       gsap.fromTo(
         "[data-animate='card']",
         { opacity: 0, y: 20, scale: 0.97 },
         { opacity: 1, y: 0, scale: 1, duration: 0.5, stagger: 0.08, ease: "power3.out" }
       );
-      gsap.fromTo(
-        "[data-animate='progress']",
-        { scaleX: 0 },
-        { scaleX: 1, duration: 1, delay: 0.3, stagger: 0.05, ease: "power2.out", transformOrigin: "left center" }
-      );
     }, containerRef);
     return () => ctx.revert();
-  }, []);
+  }, [loading]);
 
-  const overallAchievement = myKpis.reduce((acc, kpi) => {
-    return acc + Math.min((kpi.actual / kpi.target) * 100, 150);
-  }, 0) / myKpis.length;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 text-brand-500 animate-spin" />
+      </div>
+    );
+  }
+
+  const pendingCount = entries.filter((e) => e.status === "pending").length;
+  const approvedCount = entries.filter((e) => e.status === "approved").length;
 
   return (
     <div ref={containerRef} className="space-y-6">
@@ -118,7 +103,7 @@ export default function MyKpisPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My KPIs</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Your assigned performance indicators and progress
+            Your assigned performance indicators and submissions
           </p>
         </div>
         <Link
@@ -130,121 +115,105 @@ export default function MyKpisPage() {
         </Link>
       </div>
 
-      {/* Summary Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      {/* Summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div data-animate="card" className="rounded-xl border border-border bg-surface p-4 shadow-card">
-          <p className="text-xs text-gray-500">Overall Achievement</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{overallAchievement.toFixed(1)}%</p>
-        </div>
-        <div data-animate="card" className="rounded-xl border border-border bg-surface p-4 shadow-card">
-          <p className="text-xs text-gray-500">Assigned KPIs</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{myKpis.length}</p>
+          <p className="text-xs text-gray-500">Available KPIs</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{kpis.length}</p>
         </div>
         <div data-animate="card" className="rounded-xl border border-border bg-surface p-4 shadow-card">
           <p className="text-xs text-gray-500">Pending Submissions</p>
-          <p className="text-2xl font-bold text-amber-600 mt-1">
-            {myRecentEntries.filter((e) => e.status === "pending").length}
-          </p>
+          <p className="text-2xl font-bold text-amber-600 mt-1">{pendingCount}</p>
         </div>
         <div data-animate="card" className="rounded-xl border border-border bg-surface p-4 shadow-card">
-          <p className="text-xs text-gray-500">Due This Week</p>
-          <p className="text-2xl font-bold text-red-600 mt-1">2</p>
+          <p className="text-xs text-gray-500">Approved Entries</p>
+          <p className="text-2xl font-bold text-emerald-600 mt-1">{approvedCount}</p>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {myKpis.map((kpi) => {
-          const achievement = Math.min((kpi.actual / kpi.target) * 100, 150);
-          const config = statusConfig[kpi.status];
-          const StatusIcon = config.icon;
-
-          return (
-            <div
-              key={kpi.id}
-              data-animate="card"
-              className="rounded-xl border border-border bg-surface p-5 shadow-card hover:shadow-elevated transition-all"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900">{kpi.name}</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">{kpi.timeframe} · Due {kpi.deadline}</p>
-                </div>
-                <div className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 border text-[10px] font-medium", config.bg, config.color)}>
-                  <StatusIcon className="h-3 w-3" />
-                  {config.label}
-                </div>
-              </div>
-
-              {/* Progress */}
-              <div className="mb-3">
-                <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="text-gray-500">Progress</span>
-                  <span className="font-mono font-medium text-gray-800">
-                    {kpi.actual} / {kpi.target} {kpi.unit}
+      {/* KPIs Available */}
+      <div data-animate="card" className="rounded-xl border border-border bg-surface p-5 shadow-card">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-gray-900">KPIs You Can Report On</h3>
+        </div>
+        {kpis.length === 0 ? (
+          <p className="text-sm text-gray-500 py-4 text-center">No KPIs assigned yet. Contact your manager.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {kpis.map((kpi) => (
+              <div key={kpi.id} className="rounded-lg border border-gray-100 p-4 hover:bg-gray-50 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-800">{kpi.name}</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {kpi.department?.name} · {kpi.timeframe} · Target: {kpi.target_value} {kpi.unit}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded capitalize">
+                    {kpi.type}
                   </span>
                 </div>
-                <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
-                  <div
-                    data-animate="progress"
-                    className={cn(
-                      "h-full rounded-full",
-                      achievement >= 100 ? "bg-emerald-500" :
-                      achievement >= 75 ? "bg-blue-500" :
-                      achievement >= 50 ? "bg-amber-500" : "bg-red-500"
-                    )}
-                    style={{ width: `${Math.min(achievement, 100)}%` }}
-                  />
-                </div>
-                <p className="text-right text-[10px] text-gray-400 mt-1">
-                  {achievement.toFixed(1)}% achieved
-                </p>
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                <p className="text-[11px] text-gray-400">
-                  {kpi.lastSubmission ? `Last submitted: ${kpi.lastSubmission}` : "No submission yet"}
-                </p>
                 <Link
                   href="/dashboard/entries/new"
-                  className="text-[11px] font-medium text-brand-600 hover:text-brand-700"
+                  className="inline-block mt-2 text-[11px] font-medium text-brand-600 hover:text-brand-700"
                 >
-                  Submit →
+                  Submit entry →
                 </Link>
               </div>
-            </div>
-          );
-        })}
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Recent Submissions */}
+      {/* My Recent Entries */}
       <div data-animate="card" className="rounded-xl border border-border bg-surface p-5 shadow-card">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">My Recent Submissions</h3>
-        <div className="space-y-2">
-          {myRecentEntries.map((entry) => {
-            const config = entryStatusConfig[entry.status];
-            return (
-              <div key={entry.id} className="flex items-center justify-between rounded-lg border border-gray-100 p-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-gray-50 flex items-center justify-center">
-                    <Target className="h-4 w-4 text-gray-400" />
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">My Submissions</h3>
+        {entries.length === 0 ? (
+          <p className="text-sm text-gray-500 py-4 text-center">
+            No submissions yet. <Link href="/dashboard/entries/new" className="text-brand-600 font-medium">Submit your first entry</Link>
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {entries.map((entry) => {
+              const achievement = entry.kpi ? Math.min((entry.actual_value / entry.kpi.target_value) * 100, 150) : 0;
+              return (
+                <div key={entry.id} className="flex items-center justify-between rounded-lg border border-gray-100 p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-gray-50 flex items-center justify-center">
+                      <Target className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{entry.kpi?.name || "KPI"}</p>
+                      <p className="text-[11px] text-gray-500">
+                        {entry.actual_value} {entry.kpi?.unit || ""} · {entry.period_start} to {entry.period_end}
+                        {entry.kpi && (
+                          <span className="ml-1 text-gray-400">({achievement.toFixed(0)}% of target)</span>
+                        )}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">{entry.kpi}</p>
-                    <p className="text-[11px] text-gray-500">{entry.value} · {entry.period}</p>
+                  <div className="flex items-center gap-2">
+                    {entry.status === "pending" && (
+                      <span className="flex items-center gap-1 text-[10px] font-medium bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">
+                        <Clock className="h-3 w-3" /> Pending
+                      </span>
+                    )}
+                    {entry.status === "approved" && (
+                      <span className="flex items-center gap-1 text-[10px] font-medium bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full">
+                        <CheckCircle2 className="h-3 w-3" /> Approved
+                      </span>
+                    )}
+                    {entry.status === "rejected" && (
+                      <span className="flex items-center gap-1 text-[10px] font-medium bg-red-50 text-red-600 px-2 py-0.5 rounded-full">
+                        <XCircle className="h-3 w-3" /> Rejected
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] text-gray-400">{entry.date}</span>
-                  <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full", config.bg, config.color)}>
-                    {config.label}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

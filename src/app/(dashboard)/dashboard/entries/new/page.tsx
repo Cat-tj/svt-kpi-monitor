@@ -2,28 +2,49 @@
 
 import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
-import { ClipboardCheck, Calendar, Hash, FileText, Send } from "lucide-react";
+import { ClipboardCheck, Calendar, Hash, FileText, Send, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
+import { createClient } from "@/lib/supabase/client";
 
-const kpiOptions = [
-  { id: "1", name: "Monthly Revenue", department: "Sales & Marketing" },
-  { id: "2", name: "Sprint Velocity", department: "Engineering" },
-  { id: "3", name: "Customer Satisfaction", department: "Operations" },
-  { id: "4", name: "Lead Conversion Rate", department: "Sales & Marketing" },
-  { id: "5", name: "Feature Delivery", department: "Product" },
-  { id: "6", name: "Employee Retention", department: "HR & Admin" },
-  { id: "7", name: "SLA Compliance", department: "Operations" },
-  { id: "8", name: "Operational Cost Reduction", department: "Finance" },
-];
+interface KpiOption {
+  id: string;
+  name: string;
+  department: { name: string } | null;
+  type: string;
+  unit: string | null;
+  target_value: number;
+}
 
 export default function NewEntryPage() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const [kpiOptions, setKpiOptions] = useState<KpiOption[]>([]);
   const [selectedKpi, setSelectedKpi] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [actualValue, setActualValue] = useState("");
   const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+
+  // Load KPIs from database
+  useEffect(() => {
+    async function loadKpis() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("kpis")
+        .select("id, name, type, unit, target_value, department:departments(name)")
+        .eq("is_active", true)
+        .order("name");
+
+      if (data) {
+        setKpiOptions(data as unknown as KpiOption[]);
+      }
+    }
+    loadKpis();
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -36,11 +57,42 @@ export default function NewEntryPage() {
     return () => ctx.revert();
   }, []);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!user) return;
+
+    setLoading(true);
+    setError("");
+
+    const supabase = createClient();
+
+    const { error: insertError } = await supabase.from("kpi_entries").insert({
+      kpi_id: selectedKpi,
+      submitted_by: user.id,
+      period_start: startDate,
+      period_end: endDate,
+      actual_value: parseFloat(actualValue),
+      notes: notes || null,
+    } as any);
+
+    if (insertError) {
+      setError(insertError.message);
+      setLoading(false);
+      return;
+    }
+
     setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
+    setLoading(false);
+    // Reset form
+    setSelectedKpi("");
+    setStartDate("");
+    setEndDate("");
+    setActualValue("");
+    setNotes("");
+    setTimeout(() => setSubmitted(false), 4000);
   }
+
+  const selectedKpiDetails = kpiOptions.find((k) => k.id === selectedKpi);
 
   return (
     <div ref={containerRef} className="space-y-6">
@@ -69,10 +121,15 @@ export default function NewEntryPage() {
             <option value="">Choose a KPI to report on...</option>
             {kpiOptions.map((kpi) => (
               <option key={kpi.id} value={kpi.id}>
-                {kpi.name} — {kpi.department}
+                {kpi.name} — {kpi.department?.name || "Unassigned"} (Target: {kpi.target_value} {kpi.unit})
               </option>
             ))}
           </select>
+          {selectedKpiDetails && (
+            <p className="text-xs text-gray-500 mt-2">
+              Type: {selectedKpiDetails.type} · Target: {selectedKpiDetails.target_value} {selectedKpiDetails.unit}
+            </p>
+          )}
         </div>
 
         {/* Period Selector */}
@@ -113,44 +170,50 @@ export default function NewEntryPage() {
           </label>
           <input
             type="number"
+            step="any"
             value={actualValue}
             onChange={(e) => setActualValue(e.target.value)}
-            placeholder="Enter the achieved value..."
+            placeholder={selectedKpiDetails ? `Target: ${selectedKpiDetails.target_value} ${selectedKpiDetails.unit}` : "Enter the achieved value..."}
             className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition-all"
             required
           />
-          <p className="text-xs text-gray-400 mt-2">
-            Enter the numeric value achieved during this period
-          </p>
         </div>
 
         {/* Notes */}
         <div data-animate="field" className="rounded-xl border border-border bg-surface p-5 shadow-card">
           <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
             <FileText className="h-4 w-4 text-gray-400" />
-            Notes
+            Notes (optional)
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Add context or explanation for this entry..."
-            rows={4}
+            rows={3}
             className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition-all resize-none"
           />
         </div>
+
+        {/* Error */}
+        {error && (
+          <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+            <p className="text-xs text-red-700">{error}</p>
+          </div>
+        )}
 
         {/* Submit */}
         <div data-animate="field" className="flex items-center gap-3">
           <button
             type="submit"
-            className="flex items-center gap-2 rounded-lg gradient-brand px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+            disabled={loading}
+            className="flex items-center gap-2 rounded-lg gradient-brand px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity disabled:opacity-60"
           >
-            <Send className="h-4 w-4" />
-            Submit Entry
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {loading ? "Submitting..." : "Submit Entry"}
           </button>
           {submitted && (
-            <span className="text-sm text-emerald-600 font-medium animate-pulse">
-              ✓ Entry submitted successfully!
+            <span className="text-sm text-emerald-600 font-medium">
+              ✓ Entry submitted successfully! Waiting for manager approval.
             </span>
           )}
         </div>
