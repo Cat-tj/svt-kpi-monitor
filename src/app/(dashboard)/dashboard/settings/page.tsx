@@ -2,9 +2,11 @@
 
 import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
-import { Shield, Bell, Palette, Database } from "lucide-react";
+import { Palette, Globe, Sun, Moon, Monitor } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoleGuard } from "@/components/ui/role-guard";
+import { useTheme } from "@/lib/theme-context";
+import { useI18n } from "@/lib/i18n";
 
 export default function SettingsPage() {
   return (
@@ -16,7 +18,8 @@ export default function SettingsPage() {
 
 function SettingsContent() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [activeTab, setActiveTab] = useState("notifications");
+  const { theme, setTheme } = useTheme();
+  const { locale, setLocale } = useI18n();
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -29,191 +32,84 @@ function SettingsContent() {
     return () => ctx.revert();
   }, []);
 
-  const tabs = [
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "security", label: "Security", icon: Shield },
-    { id: "data", label: "Data Management", icon: Database },
-    { id: "appearance", label: "Appearance", icon: Palette },
+  const themes = [
+    { id: "light" as const, label: "Light", icon: Sun },
+    { id: "dark" as const, label: "Dark", icon: Moon },
+    { id: "system" as const, label: "System", icon: Monitor },
+  ];
+
+  const languages = [
+    { id: "en" as const, label: "English", flag: "🇬🇧" },
+    { id: "id" as const, label: "Bahasa Indonesia", flag: "🇮🇩" },
   ];
 
   return (
-    <div ref={containerRef} className="space-y-6">
+    <div ref={containerRef} className="space-y-6 max-w-2xl">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Configure system preferences and notifications
+          Appearance and language preferences
         </p>
       </div>
 
-      <div className="flex gap-6">
-        {/* Sidebar Tabs */}
-        <div data-animate="section" className="w-52 flex-shrink-0">
-          <nav className="space-y-1">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
-                  activeTab === tab.id
-                    ? "bg-brand-50 text-brand-700"
-                    : "text-gray-600 hover:bg-gray-50"
-                )}
-              >
-                <tab.icon className={cn("h-4 w-4", activeTab === tab.id ? "text-brand-600" : "text-gray-400")} />
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+      {/* Theme */}
+      <div data-animate="section" className="rounded-xl border border-border bg-surface p-6 shadow-card">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50">
+            <Palette className="h-4 w-4 text-brand-600" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Theme</h3>
+            <p className="text-xs text-gray-500">Choose your preferred color scheme</p>
+          </div>
         </div>
+        <div className="grid grid-cols-3 gap-3">
+          {themes.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTheme(t.id)}
+              className={cn(
+                "flex flex-col items-center gap-2 rounded-xl border-2 px-4 py-4 text-sm font-medium transition-all",
+                theme === t.id
+                  ? "border-brand-500 bg-brand-50 text-brand-700"
+                  : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+              )}
+            >
+              <t.icon className={cn("h-5 w-5", theme === t.id ? "text-brand-600" : "text-gray-400")} />
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        {/* Content Area */}
-        <div className="flex-1">
-          {activeTab === "notifications" && (
-            <div data-animate="section" className="rounded-xl border border-border bg-surface p-6 shadow-card">
-              <h3 className="text-base font-semibold text-gray-900 mb-4">Notification Preferences</h3>
-              <div className="space-y-4">
-                {[
-                  { label: "KPI entry submitted for approval", enabled: true },
-                  { label: "Entry approved/rejected", enabled: true },
-                  { label: "KPI deadline approaching", enabled: true },
-                  { label: "Weekly performance summary", enabled: true },
-                  { label: "Department ranking changes", enabled: false },
-                  { label: "System maintenance alerts", enabled: true },
-                ].map((pref) => (
-                  <div key={pref.label} className="flex items-center justify-between py-2">
-                    <span className="text-sm text-gray-700">{pref.label}</span>
-                    <button className={cn(
-                      "relative h-6 w-11 rounded-full transition-colors",
-                      pref.enabled ? "bg-brand-500" : "bg-gray-200"
-                    )}>
-                      <span className={cn(
-                        "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
-                        pref.enabled ? "translate-x-5" : "translate-x-0.5"
-                      )} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === "security" && (
-            <div data-animate="section" className="rounded-xl border border-border bg-surface p-6 shadow-card">
-              <h3 className="text-base font-semibold text-gray-900 mb-4">Security Settings</h3>
-              <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Session Timeout</label>
-                  <p className="text-xs text-gray-500 mt-0.5 mb-2">Auto-logout after inactivity</p>
-                  <select className="rounded-lg border border-gray-200 px-3 py-2 text-sm w-48">
-                    <option>30 minutes</option>
-                    <option>1 hour</option>
-                    <option>4 hours</option>
-                    <option>8 hours</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Two-Factor Authentication</label>
-                  <p className="text-xs text-gray-500 mt-0.5 mb-2">Add an extra layer of security</p>
-                  <button className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    Enable 2FA
-                  </button>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Password Policy</label>
-                  <p className="text-xs text-gray-500 mt-0.5 mb-2">Minimum requirements for user passwords</p>
-                  <select className="rounded-lg border border-gray-200 px-3 py-2 text-sm w-48">
-                    <option>Standard (8+ chars)</option>
-                    <option>Strong (12+ chars, mixed)</option>
-                    <option>Enterprise (16+ chars, symbols)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "data" && (
-            <div data-animate="section" className="rounded-xl border border-border bg-surface p-6 shadow-card">
-              <h3 className="text-base font-semibold text-gray-900 mb-4">Data Management</h3>
-              <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Data Retention</label>
-                  <p className="text-xs text-gray-500 mt-0.5 mb-2">How long to keep historical KPI entries</p>
-                  <select className="rounded-lg border border-gray-200 px-3 py-2 text-sm w-48">
-                    <option>1 year</option>
-                    <option>2 years</option>
-                    <option>5 years</option>
-                    <option>Unlimited</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Export Format</label>
-                  <p className="text-xs text-gray-500 mt-0.5 mb-2">Default format for data exports</p>
-                  <select className="rounded-lg border border-gray-200 px-3 py-2 text-sm w-48">
-                    <option>CSV</option>
-                    <option>Excel (.xlsx)</option>
-                    <option>JSON</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Backup Schedule</label>
-                  <p className="text-xs text-gray-500 mt-0.5 mb-2">Automated database backup frequency</p>
-                  <select className="rounded-lg border border-gray-200 px-3 py-2 text-sm w-48">
-                    <option>Daily</option>
-                    <option>Weekly</option>
-                    <option>Monthly</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "appearance" && (
-            <div data-animate="section" className="rounded-xl border border-border bg-surface p-6 shadow-card">
-              <h3 className="text-base font-semibold text-gray-900 mb-4">Appearance</h3>
-              <div className="space-y-6">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Theme</label>
-                  <p className="text-xs text-gray-500 mt-0.5 mb-3">Choose your preferred color scheme</p>
-                  <div className="flex items-center gap-3">
-                    {["Light", "Dark", "System"].map((theme) => (
-                      <button
-                        key={theme}
-                        className={cn(
-                          "rounded-lg border px-4 py-2.5 text-sm font-medium transition-all",
-                          theme === "Light"
-                            ? "border-brand-200 bg-brand-50 text-brand-700"
-                            : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                        )}
-                      >
-                        {theme}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Dashboard Density</label>
-                  <p className="text-xs text-gray-500 mt-0.5 mb-3">Adjust information density</p>
-                  <div className="flex items-center gap-3">
-                    {["Compact", "Comfortable", "Spacious"].map((density) => (
-                      <button
-                        key={density}
-                        className={cn(
-                          "rounded-lg border px-4 py-2.5 text-sm font-medium transition-all",
-                          density === "Comfortable"
-                            ? "border-brand-200 bg-brand-50 text-brand-700"
-                            : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                        )}
-                      >
-                        {density}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+      {/* Language */}
+      <div data-animate="section" className="rounded-xl border border-border bg-surface p-6 shadow-card">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50">
+            <Globe className="h-4 w-4 text-emerald-600" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Language</h3>
+            <p className="text-xs text-gray-500">Select interface language</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {languages.map((lang) => (
+            <button
+              key={lang.id}
+              onClick={() => setLocale(lang.id)}
+              className={cn(
+                "flex items-center gap-3 rounded-xl border-2 px-4 py-3.5 text-sm font-medium transition-all",
+                locale === lang.id
+                  ? "border-brand-500 bg-brand-50 text-brand-700"
+                  : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+              )}
+            >
+              <span className="text-xl">{lang.flag}</span>
+              {lang.label}
+            </button>
+          ))}
         </div>
       </div>
     </div>

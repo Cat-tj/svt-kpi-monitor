@@ -132,7 +132,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocale] = useState<Locale>("en");
 
   useEffect(() => {
-    const saved = localStorage.getItem("svt-locale") as Locale | null;
+    const saved = localStorage.getItem("kpi-locale") as Locale | null;
     if (saved && (saved === "en" || saved === "id")) {
       setLocale(saved);
     }
@@ -140,7 +140,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   function changeLocale(l: Locale) {
     setLocale(l);
-    localStorage.setItem("svt-locale", l);
+    localStorage.setItem("kpi-locale", l);
   }
 
   function t(key: string): string {
