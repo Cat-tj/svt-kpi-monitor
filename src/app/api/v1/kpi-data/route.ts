@@ -1,28 +1,33 @@
 /**
  * KPI Data API - REST Endpoint for OpenClaw Agents
  * GET /api/v1/kpi-data
- *
- * Query Params:
- *   - department_id (optional): Filter by department
- *   - timeframe (optional): 'weekly' | 'monthly' | 'annually'
- *   - period_start (optional): ISO date string
- *   - period_end (optional): ISO date string
- *   - status (optional): 'approved' only returns validated data
- *
- * Auth: Bearer token (API key stored in api_keys table)
  */
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
 import { createHmac } from "crypto";
 
-// Force dynamic rendering
+// Force dynamic - never statically render this route
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+function getAdminClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        getAll() { return []; },
+        setAll() {},
+      },
+    }
+  );
+}
 
 // Validate API key
 async function validateApiKey(apiKey: string): Promise<boolean> {
   if (!apiKey) return false;
 
-  const supabase = createAdminClient();
+  const supabase = getAdminClient();
   const keyHash = createHmac("sha256", "svt-kpi-salt")
     .update(apiKey)
     .digest("hex");
@@ -36,12 +41,10 @@ async function validateApiKey(apiKey: string): Promise<boolean> {
   if (error || !data) return false;
   if (!data.is_active) return false;
 
-  // Check expiration
   if (data.expires_at && new Date(data.expires_at) < new Date()) {
     return false;
   }
 
-  // Update last_used_at
   await supabase
     .from("api_keys")
     .update({ last_used_at: new Date().toISOString() })
@@ -52,7 +55,6 @@ async function validateApiKey(apiKey: string): Promise<boolean> {
 
 export async function GET(request: NextRequest) {
   try {
-    // Extract and validate API key
     const authHeader = request.headers.get("authorization") || "";
     const apiKey = authHeader.replace("Bearer ", "");
 
@@ -63,10 +65,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createAdminClient();
+    const supabase = getAdminClient();
     const { searchParams } = new URL(request.url);
 
-    // Build query
     let query = supabase
       .from("kpi_entries")
       .select(`
@@ -85,7 +86,6 @@ export async function GET(request: NextRequest) {
       `)
       .eq("status", searchParams.get("status") || "approved");
 
-    // Apply filters
     const departmentId = searchParams.get("department_id");
     if (departmentId) {
       query = query.eq("kpi.department_id", departmentId);
@@ -101,7 +101,6 @@ export async function GET(request: NextRequest) {
       query = query.lte("period_end", periodEnd);
     }
 
-    // Execute
     const { data, error } = await query
       .order("period_end", { ascending: false })
       .limit(200);

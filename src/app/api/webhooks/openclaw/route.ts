@@ -1,19 +1,28 @@
 /**
  * OpenClaw Webhook Endpoint
  * Receives AI-generated reports and insights from VPS-hosted OpenClaw agents.
- *
- * Security: Validates requests via HMAC signature in X-OpenClaw-Signature header.
- * This bypasses Supabase RLS by using the service role client.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/server";
-import { headers } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 import { createHmac } from "crypto";
 
-// Force dynamic rendering
+// Force dynamic - never statically render this route
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-// Verify the webhook signature from OpenClaw
+function getAdminClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        getAll() { return []; },
+        setAll() {},
+      },
+    }
+  );
+}
+
 function verifySignature(payload: string, signature: string): boolean {
   const secret = process.env.OPENCLAW_API_SECRET;
   if (!secret) return false;
@@ -25,14 +34,11 @@ function verifySignature(payload: string, signature: string): boolean {
   return `sha256=${expectedSig}` === signature;
 }
 
-// POST /api/webhooks/openclaw - Receive AI reports
 export async function POST(request: NextRequest) {
   try {
-    const headersList = headers();
-    const signature = headersList.get("x-openclaw-signature") || "";
+    const signature = request.headers.get("x-openclaw-signature") || "";
     const body = await request.text();
 
-    // Verify webhook authenticity
     if (!verifySignature(body, signature)) {
       return NextResponse.json(
         { error: "Invalid signature" },
@@ -42,7 +48,6 @@ export async function POST(request: NextRequest) {
 
     const payload = JSON.parse(body);
 
-    // Validate payload structure
     if (!payload.title || !payload.report_type || !payload.content) {
       return NextResponse.json(
         { error: "Missing required fields: title, report_type, content" },
@@ -50,9 +55,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createAdminClient();
+    const supabase = getAdminClient();
 
-    // Insert the AI report
     const { data, error } = await supabase
       .from("ai_reports")
       .insert({
