@@ -94,6 +94,23 @@ export default function LoginPage() {
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
             {loading ? "Signing in..." : "Sign In"}
           </button>
+
+          <button
+            type="button"
+            onClick={async () => {
+              if (!email) { setError("Enter your email first"); return; }
+              const supabase = createClient();
+              const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/auth/callback`,
+              });
+              if (resetErr) setError(resetErr.message);
+              else setError("");
+              alert(resetErr ? resetErr.message : "Password reset link sent to your email!");
+            }}
+            className="w-full text-center text-xs text-brand-600 hover:text-brand-700 font-medium"
+          >
+            Forgot password?
+          </button>
         </form>
 
         <p className="mt-4 text-center text-[11px] text-gray-400">

@@ -14,6 +14,10 @@ import {
   TrendingUp,
   PlusCircle,
   BarChart3,
+  Layers,
+  Server,
+  FileText,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -34,8 +38,12 @@ const navigation: NavItem[] = [
   { name: "Departments", href: "/dashboard/departments", icon: Building2, roles: ["admin"] },
   { name: "Team", href: "/dashboard/team", icon: Users, roles: ["admin", "manager"] },
   { name: "Analytics", href: "/dashboard/analytics", icon: TrendingUp, roles: ["admin", "manager"] },
+  { name: "Templates", href: "/dashboard/templates", icon: Layers, roles: ["admin", "manager"] },
   { name: "Notifications", href: "/dashboard/notifications", icon: Bell, roles: ["admin", "manager", "staff"] },
+  { name: "Announcements", href: "/dashboard/announcements", icon: Megaphone, roles: ["admin", "manager", "staff"] },
   { name: "Profile", href: "/dashboard/profile", icon: User, roles: ["admin", "manager", "staff"] },
+  { name: "System", href: "/dashboard/system", icon: Server, roles: ["admin"] },
+  { name: "Changelog", href: "/dashboard/changelog", icon: FileText, roles: ["admin", "manager", "staff"] },
   { name: "Settings", href: "/dashboard/settings", icon: Settings, roles: ["admin"] },
 ];
 
