@@ -2,158 +2,101 @@
 
 import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
-import {
-  Target,
-  Plus,
-  Search,
-  Filter,
-  MoreVertical,
-  TrendingUp,
-  TrendingDown,
-} from "lucide-react";
+import { Target, Plus, Search, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
+import { createClient } from "@/lib/supabase/client";
 
-// Mock KPI data
-const kpiData = [
-  {
-    id: "1",
-    name: "Monthly Revenue",
-    department: "Sales & Marketing",
-    type: "currency" as const,
-    timeframe: "monthly" as const,
-    target: 3000000000,
-    actual: 2840000000,
-    weight: 25,
-    unit: "IDR",
-    trend: +12.5,
-    isActive: true,
-  },
-  {
-    id: "2",
-    name: "Sprint Velocity",
-    department: "Engineering",
-    type: "numerical" as const,
-    timeframe: "weekly" as const,
-    target: 50,
-    actual: 42,
-    weight: 15,
-    unit: "points",
-    trend: +8.2,
-    isActive: true,
-  },
-  {
-    id: "3",
-    name: "Customer Satisfaction",
-    department: "Operations",
-    type: "percentage" as const,
-    timeframe: "monthly" as const,
-    target: 95,
-    actual: 96.2,
-    weight: 20,
-    unit: "%",
-    trend: +1.1,
-    isActive: true,
-  },
-  {
-    id: "4",
-    name: "Lead Conversion Rate",
-    department: "Sales & Marketing",
-    type: "percentage" as const,
-    timeframe: "monthly" as const,
-    target: 30,
-    actual: 23.4,
-    weight: 20,
-    unit: "%",
-    trend: -2.3,
-    isActive: true,
-  },
-  {
-    id: "5",
-    name: "Feature Delivery",
-    department: "Product",
-    type: "numerical" as const,
-    timeframe: "monthly" as const,
-    target: 10,
-    actual: 8,
-    weight: 15,
-    unit: "features",
-    trend: +5.0,
-    isActive: true,
-  },
-  {
-    id: "6",
-    name: "Employee Retention",
-    department: "HR & Admin",
-    type: "percentage" as const,
-    timeframe: "annually" as const,
-    target: 90,
-    actual: 87.5,
-    weight: 10,
-    unit: "%",
-    trend: -1.5,
-    isActive: true,
-  },
-  {
-    id: "7",
-    name: "SLA Compliance",
-    department: "Operations",
-    type: "percentage" as const,
-    timeframe: "monthly" as const,
-    target: 99,
-    actual: 96.2,
-    weight: 20,
-    unit: "%",
-    trend: -3.8,
-    isActive: true,
-  },
-  {
-    id: "8",
-    name: "Operational Cost Reduction",
-    department: "Finance",
-    type: "percentage" as const,
-    timeframe: "annually" as const,
-    target: 15,
-    actual: 11.2,
-    weight: 15,
-    unit: "%",
-    trend: +2.1,
-    isActive: false,
-  },
-];
+interface Kpi {
+  id: string;
+  name: string;
+  description: string | null;
+  type: string;
+  timeframe: string;
+  target_value: number;
+  weight: number;
+  unit: string | null;
+  is_active: boolean;
+  department: { id: string; name: string } | null;
+}
 
-function formatValue(value: number, type: string, unit: string): string {
-  if (type === "currency") {
-    return `Rp ${(value / 1000000000).toFixed(2)}B`;
-  }
-  if (type === "percentage") {
-    return `${value}%`;
-  }
-  return `${value} ${unit}`;
+interface Department {
+  id: string;
+  name: string;
 }
 
 export default function KpisPage() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const { user, isAdmin, isManager } = useAuth();
+  const [kpis, setKpis] = useState<Kpi[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filterDept, setFilterDept] = useState("all");
+  const [showCreateForm, setShowCreateForm] = useState(false);
+
+  // Create form state
+  const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [newDept, setNewDept] = useState("");
+  const [newType, setNewType] = useState("numerical");
+  const [newTimeframe, setNewTimeframe] = useState("monthly");
+  const [newTarget, setNewTarget] = useState("");
+  const [newWeight, setNewWeight] = useState("10");
+  const [newUnit, setNewUnit] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  async function loadData() {
+    const supabase = createClient();
+    const [kpiRes, deptRes] = await Promise.all([
+      supabase.from("kpis").select("*, department:departments(id, name)").eq("is_active", true).order("name"),
+      supabase.from("departments").select("id, name").order("name"),
+    ]);
+    if (kpiRes.data) setKpis(kpiRes.data as unknown as Kpi[]);
+    if (deptRes.data) setDepartments(deptRes.data as Department[]);
+    setLoading(false);
+  }
+
+  useEffect(() => { loadData(); }, []);
 
   useEffect(() => {
+    if (loading) return;
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        "[data-animate='row']",
-        { opacity: 0, x: -12 },
-        { opacity: 1, x: 0, duration: 0.4, stagger: 0.05, ease: "power2.out" }
-      );
+      gsap.fromTo("[data-animate='row']", { opacity: 0, x: -12 }, { opacity: 1, x: 0, duration: 0.4, stagger: 0.04, ease: "power2.out" });
     }, containerRef);
     return () => ctx.revert();
-  }, []);
+  }, [loading]);
 
-  const filtered = kpiData.filter((kpi) => {
-    const matchSearch = kpi.name.toLowerCase().includes(search.toLowerCase());
-    const matchDept = filterDept === "all" || kpi.department === filterDept;
-    return matchSearch && matchDept;
-  });
+  async function handleCreateKpi(e: React.FormEvent) {
+    e.preventDefault();
+    setCreating(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("kpis").insert({
+      name: newName,
+      description: newDesc || null,
+      department_id: newDept,
+      type: newType,
+      timeframe: newTimeframe,
+      target_value: parseFloat(newTarget),
+      weight: parseFloat(newWeight),
+      unit: newUnit || null,
+      created_by: user?.id,
+    } as any);
 
-  const departments = Array.from(new Set(kpiData.map((k) => k.department)));
+    if (!error) {
+      setShowCreateForm(false);
+      setNewName(""); setNewDesc(""); setNewDept(""); setNewTarget(""); setNewUnit("");
+      await loadData();
+    }
+    setCreating(false);
+  }
+
+  const filtered = kpis.filter((kpi) =>
+    kpi.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 text-brand-500 animate-spin" /></div>;
+  }
 
   return (
     <div ref={containerRef} className="space-y-6">
@@ -161,137 +104,118 @@ export default function KpisPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">KPI Metrics</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage and monitor all performance indicators
-          </p>
+          <p className="text-sm text-gray-500 mt-1">{kpis.length} active KPIs</p>
         </div>
-        <button className="flex items-center gap-2 rounded-lg gradient-brand px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity">
-          <Plus className="h-4 w-4" />
-          New KPI
-        </button>
+        {(isAdmin || isManager) && (
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="flex items-center gap-2 rounded-lg gradient-brand px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+          >
+            <Plus className="h-4 w-4" /> New KPI
+          </button>
+        )}
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 rounded-lg bg-surface border border-border px-3 py-2 flex-1 max-w-sm">
-          <Search className="h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search KPIs..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-          />
-        </div>
-        <select
-          value={filterDept}
-          onChange={(e) => setFilterDept(e.target.value)}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-gray-700 outline-none"
-        >
-          <option value="all">All Departments</option>
-          {departments.map((d) => (
-            <option key={d} value={d}>{d}</option>
-          ))}
-        </select>
+      {/* Search */}
+      <div className="flex items-center gap-2 rounded-lg bg-surface border border-border px-3 py-2 max-w-sm">
+        <Search className="h-4 w-4 text-gray-400" />
+        <input type="text" placeholder="Search KPIs..." value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400" />
       </div>
 
-      {/* KPI Table */}
+      {/* Create KPI Modal */}
+      {showCreateForm && (
+        <div className="rounded-xl border border-brand-200 bg-brand-50/30 p-5 shadow-card">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-gray-900">Create New KPI</h3>
+            <button onClick={() => setShowCreateForm(false)} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>
+          </div>
+          <form onSubmit={handleCreateKpi} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Name *</label>
+              <input type="text" required value={newName} onChange={(e) => setNewName(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-300" placeholder="e.g. Sprint Velocity" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Department *</label>
+              <select required value={newDept} onChange={(e) => setNewDept(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none">
+                <option value="">Select department</option>
+                {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Type</label>
+              <select value={newType} onChange={(e) => setNewType(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none">
+                <option value="numerical">Numerical</option>
+                <option value="percentage">Percentage</option>
+                <option value="currency">Currency</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Timeframe</label>
+              <select value={newTimeframe} onChange={(e) => setNewTimeframe(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none">
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="annually">Annually</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Target Value *</label>
+              <input type="number" step="any" required value={newTarget} onChange={(e) => setNewTarget(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none" placeholder="e.g. 50" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Unit</label>
+              <input type="text" value={newUnit} onChange={(e) => setNewUnit(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none" placeholder="e.g. points, %, IDR" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Weight (%)</label>
+              <input type="number" min="1" max="100" value={newWeight} onChange={(e) => setNewWeight(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Description</label>
+              <input type="text" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none" placeholder="Optional description" />
+            </div>
+            <div className="md:col-span-2">
+              <button type="submit" disabled={creating} className="rounded-lg gradient-brand px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60">
+                {creating ? "Creating..." : "Create KPI"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Table */}
       <div className="rounded-xl border border-border bg-surface shadow-card overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border bg-surface-tertiary">
-              <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">KPI Name</th>
-              <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Department</th>
-              <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Type</th>
-              <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Target</th>
-              <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Actual</th>
-              <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Achievement</th>
-              <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Weight</th>
-              <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Trend</th>
-              <th className="px-5 py-3"></th>
+              <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase">Name</th>
+              <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase">Department</th>
+              <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase">Type</th>
+              <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase">Target</th>
+              <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase">Timeframe</th>
+              <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase">Weight</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {filtered.map((kpi) => {
-              const achievement = Math.min((kpi.actual / kpi.target) * 100, 150);
-              return (
-                <tr
-                  key={kpi.id}
-                  data-animate="row"
-                  className="hover:bg-gray-50/50 transition-colors"
-                >
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-2.5">
-                      <div className={cn(
-                        "h-2 w-2 rounded-full",
-                        kpi.isActive ? "bg-emerald-400" : "bg-gray-300"
-                      )} />
-                      <span className="text-sm font-medium text-gray-800">{kpi.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                      {kpi.department}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className="text-xs text-gray-600 capitalize">{kpi.type}</span>
-                  </td>
-                  <td className="px-5 py-3.5 text-sm text-gray-700 font-mono">
-                    {formatValue(kpi.target, kpi.type, kpi.unit)}
-                  </td>
-                  <td className="px-5 py-3.5 text-sm text-gray-900 font-mono font-medium">
-                    {formatValue(kpi.actual, kpi.type, kpi.unit)}
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                        <div
-                          className={cn(
-                            "h-full rounded-full",
-                            achievement >= 100 ? "bg-emerald-500" :
-                            achievement >= 75 ? "bg-amber-500" : "bg-red-500"
-                          )}
-                          style={{ width: `${Math.min(achievement, 100)}%` }}
-                        />
-                      </div>
-                      <span className={cn(
-                        "text-xs font-semibold",
-                        achievement >= 100 ? "text-emerald-600" :
-                        achievement >= 75 ? "text-amber-600" : "text-red-600"
-                      )}>
-                        {achievement.toFixed(1)}%
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5 text-xs text-gray-600 font-medium">
-                    {kpi.weight}%
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-1">
-                      {kpi.trend > 0 ? (
-                        <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-                      ) : (
-                        <TrendingDown className="h-3.5 w-3.5 text-red-500" />
-                      )}
-                      <span className={cn(
-                        "text-xs font-medium",
-                        kpi.trend > 0 ? "text-emerald-600" : "text-red-600"
-                      )}>
-                        {kpi.trend > 0 ? "+" : ""}{kpi.trend}%
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <button className="p-1 rounded hover:bg-gray-100 text-gray-400">
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
+            {filtered.map((kpi) => (
+              <tr key={kpi.id} data-animate="row" className="hover:bg-gray-50/50 transition-colors">
+                <td className="px-5 py-3.5">
+                  <span className="text-sm font-medium text-gray-800">{kpi.name}</span>
+                  {kpi.description && <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-xs">{kpi.description}</p>}
+                </td>
+                <td className="px-5 py-3.5">
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{kpi.department?.name || "—"}</span>
+                </td>
+                <td className="px-5 py-3.5 text-xs text-gray-600 capitalize">{kpi.type}</td>
+                <td className="px-5 py-3.5 text-sm text-gray-700 font-mono">{kpi.target_value} {kpi.unit || ""}</td>
+                <td className="px-5 py-3.5 text-xs text-gray-600 capitalize">{kpi.timeframe}</td>
+                <td className="px-5 py-3.5 text-xs text-gray-600">{kpi.weight}%</td>
+              </tr>
+            ))}
           </tbody>
         </table>
+        {filtered.length === 0 && (
+          <p className="text-sm text-gray-500 text-center py-8">No KPIs found.</p>
+        )}
       </div>
     </div>
   );
