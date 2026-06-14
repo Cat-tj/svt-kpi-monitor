@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/lib/theme-context";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "SVT KPI Monitor | PT. Sentra Visi Teknologi",
+  title: "KPI Monitor | PT Chief Level Indonesia",
   description: "Enterprise KPI Monitoring & Performance Analytics Platform",
   icons: { icon: "/favicon.svg" },
 };

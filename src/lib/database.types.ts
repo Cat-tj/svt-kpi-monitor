@@ -75,6 +75,9 @@ export interface Database {
           target_value: number;
           weight: number;
           unit: string | null;
+          start_date: string | null;
+          due_date: string | null;
+          assigned_to: string | null;
           is_active: boolean;
           created_by: string | null;
           created_at: string;
@@ -90,6 +93,9 @@ export interface Database {
           target_value: number;
           weight?: number;
           unit?: string | null;
+          start_date?: string | null;
+          due_date?: string | null;
+          assigned_to?: string | null;
           is_active?: boolean;
           created_by?: string | null;
         };
@@ -102,6 +108,9 @@ export interface Database {
           target_value?: number;
           weight?: number;
           unit?: string | null;
+          start_date?: string | null;
+          due_date?: string | null;
+          assigned_to?: string | null;
           is_active?: boolean;
         };
       };
@@ -146,6 +155,7 @@ export interface Database {
           reviewed_by: string | null;
           reviewed_at: string | null;
           review_notes: string | null;
+          score: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -167,6 +177,7 @@ export interface Database {
           reviewed_by?: string | null;
           reviewed_at?: string | null;
           review_notes?: string | null;
+          score?: number | null;
         };
       };
       ai_reports: {

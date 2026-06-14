@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
-import { Users, Shield, Loader2, Plus, X, Trash2 } from "lucide-react";
+import { Users, Shield, Loader2, Plus, X, Trash2, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
@@ -39,6 +39,16 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
   const [showInvite, setShowInvite] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
+
+  // Edit form
+  const [editTarget, setEditTarget] = useState<Member | null>(null);
+  const [edtName, setEdtName] = useState("");
+  const [edtRole, setEdtRole] = useState("staff");
+  const [edtDept, setEdtDept] = useState("");
+  const [edtActive, setEdtActive] = useState(true);
+  const [edtPassword, setEdtPassword] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [edtError, setEdtError] = useState("");
 
   // Invite form
   const [invEmail, setInvEmail] = useState("");
@@ -101,10 +111,6 @@ export default function TeamPage() {
     setInviting(false);
   }
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 text-brand-500 animate-spin" /></div>;
-  }
-
   async function handleDelete() {
     if (!deleteTarget) return;
     const res = await fetch("/api/admin/delete-user", {
@@ -120,6 +126,49 @@ export default function TeamPage() {
       toast(data.error || "Failed to delete user", "error");
     }
     setDeleteTarget(null);
+  }
+
+  function openEdit(member: Member) {
+    setEditTarget(member);
+    setEdtName(member.full_name);
+    setEdtRole(member.role);
+    setEdtDept(member.department?.id || "");
+    setEdtActive(member.is_active);
+    setEdtPassword("");
+    setEdtError("");
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editTarget) return;
+    setSavingEdit(true);
+    setEdtError("");
+
+    const res = await fetch("/api/admin/update-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: editTarget.id,
+        full_name: edtName,
+        role: edtRole,
+        department_id: edtDept || null,
+        is_active: edtActive,
+        password: edtPassword || undefined,
+      }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      toast(`${edtName} updated`, "success");
+      setEditTarget(null);
+      await loadData();
+    } else {
+      setEdtError(data.error || "Failed to update user");
+    }
+    setSavingEdit(false);
+  }
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 text-brand-500 animate-spin" /></div>;
   }
 
   return (
@@ -153,7 +202,7 @@ export default function TeamPage() {
             </div>
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Email *</label>
-              <input type="email" required value={invEmail} onChange={(e) => setInvEmail(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-300" placeholder="user@sentravisi.com" />
+              <input type="email" required value={invEmail} onChange={(e) => setInvEmail(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-300" placeholder="user@chieflevel.co.id" />
             </div>
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Password *</label>
@@ -224,11 +273,16 @@ export default function TeamPage() {
                   <td className="px-5 py-3.5 text-xs text-gray-500">{new Date(member.created_at).toLocaleDateString("id-ID")}</td>
                   {isAdmin && (
                     <td className="px-5 py-3.5">
-                      {member.id !== user?.id && (
-                        <button onClick={() => setDeleteTarget(member)} className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
-                          <Trash2 className="h-4 w-4" />
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => openEdit(member)} className="p-1.5 rounded hover:bg-brand-50 text-gray-400 hover:text-brand-500 transition-colors" title="Edit member">
+                          <Pencil className="h-4 w-4" />
                         </button>
-                      )}
+                        {member.id !== user?.id && (
+                          <button onClick={() => setDeleteTarget(member)} className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors" title="Remove member">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -237,6 +291,62 @@ export default function TeamPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Edit Member Modal */}
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !savingEdit && setEditTarget(null)}>
+          <div className="w-full max-w-md rounded-xl border border-border bg-surface shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+              <h3 className="text-sm font-semibold text-gray-900">Edit Member</h3>
+              <button onClick={() => setEditTarget(null)} disabled={savingEdit} className="text-gray-400 hover:text-gray-600 disabled:opacity-50"><X className="h-4 w-4" /></button>
+            </div>
+            <form onSubmit={handleEdit} className="p-5 space-y-4">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Email</label>
+                <input type="email" value={editTarget.email} disabled className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Full Name *</label>
+                <input type="text" required value={edtName} onChange={(e) => setEdtName(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-300" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Role *</label>
+                  <select value={edtRole} onChange={(e) => setEdtRole(e.target.value)} disabled={editTarget.id === user?.id} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none disabled:bg-gray-50 disabled:text-gray-400">
+                    <option value="staff">Staff</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Department</label>
+                  <select value={edtDept} onChange={(e) => setEdtDept(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none">
+                    <option value="">No department</option>
+                    {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">New Password</label>
+                <input type="text" value={edtPassword} onChange={(e) => setEdtPassword(e.target.value)} placeholder="Leave blank to keep current" className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-300" />
+              </div>
+              {editTarget.id !== user?.id && (
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={edtActive} onChange={(e) => setEdtActive(e.target.checked)} className="rounded border-gray-300" />
+                  Active account
+                </label>
+              )}
+              {edtError && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{edtError}</p>}
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setEditTarget(null)} disabled={savingEdit} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</button>
+                <button type="submit" disabled={savingEdit} className="rounded-lg gradient-brand px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60">
+                  {savingEdit ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={!!deleteTarget}

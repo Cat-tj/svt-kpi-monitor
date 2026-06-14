@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Menu, X, TrendingUp } from "lucide-react";
+import { Menu, X, TrendingUp, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 
@@ -14,6 +15,7 @@ import {
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin", "manager", "staff"] },
+  { name: "Calendar", href: "/dashboard/calendar", icon: CalendarDays, roles: ["admin", "manager", "staff"] },
   { name: "My KPIs", href: "/dashboard/my-kpis", icon: BarChart3, roles: ["staff", "manager"] },
   { name: "Submit Entry", href: "/dashboard/entries/new", icon: PlusCircle, roles: ["staff", "manager"] },
   { name: "KPI Metrics", href: "/dashboard/kpis", icon: Target, roles: ["admin", "manager"] },
@@ -45,10 +47,14 @@ export function MobileNav() {
           <div className="absolute left-0 top-0 bottom-0 w-64 bg-surface border-r border-border shadow-modal flex flex-col">
             <div className="flex h-16 items-center justify-between px-6 border-b border-border">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-brand">
-                  <TrendingUp className="h-4 w-4 text-white" />
-                </div>
-                <span className="text-sm font-semibold text-gray-900">SVT Monitor</span>
+                <Image
+                  src="/logo.png"
+                  alt="Etam Daya"
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 rounded-lg object-contain"
+                />
+                <span className="text-sm font-semibold text-gray-900">PPM Monitor</span>
               </div>
               <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />

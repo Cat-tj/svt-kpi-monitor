@@ -24,7 +24,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("svt-theme") as Theme | null;
+    const saved = localStorage.getItem("kpi-theme") as Theme | null;
     if (saved) setThemeState(saved);
   }, []);
 
@@ -44,7 +44,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   function setTheme(t: Theme) {
     setThemeState(t);
-    localStorage.setItem("svt-theme", t);
+    localStorage.setItem("kpi-theme", t);
   }
 
   return (

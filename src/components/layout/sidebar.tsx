@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -18,6 +19,7 @@ import {
   Server,
   FileText,
   Megaphone,
+  CalendarDays,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
@@ -31,6 +33,7 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin", "manager", "staff"] },
+  { name: "Calendar", href: "/dashboard/calendar", icon: CalendarDays, roles: ["admin", "manager", "staff"] },
   { name: "My KPIs", href: "/dashboard/my-kpis", icon: BarChart3, roles: ["staff", "manager"] },
   { name: "Submit Entry", href: "/dashboard/entries/new", icon: PlusCircle, roles: ["staff", "manager"] },
   { name: "KPI Metrics", href: "/dashboard/kpis", icon: Target, roles: ["admin", "manager"] },
@@ -58,13 +61,18 @@ export function Sidebar() {
     <aside className="hidden w-64 flex-shrink-0 border-r border-border bg-surface lg:flex lg:flex-col">
       {/* Brand */}
       <div className="flex h-16 items-center gap-3 border-b border-border px-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-brand">
-          <TrendingUp className="h-4 w-4 text-white" />
-        </div>
+        <Image
+          src="/logo.png"
+          alt="Etam Daya"
+          width={32}
+          height={32}
+          className="h-8 w-8 rounded-lg object-contain"
+          priority
+        />
         <div>
-          <p className="text-sm font-semibold text-gray-900">SVT Monitor</p>
+          <p className="text-sm font-semibold text-gray-900">PPM Monitor</p>
           <p className="text-[10px] text-gray-500 uppercase tracking-wider">
-            KPI Platform
+            PT Chief Level Indonesia
           </p>
         </div>
       </div>
@@ -111,7 +119,7 @@ export function Sidebar() {
             {user?.full_name || "Loading..."}
           </p>
           <p className="text-[10px] text-gray-500 mt-0.5 capitalize">
-            {userRole} · PT. Sentra Visi Teknologi
+            {userRole} · PT Chief Level Indonesia
           </p>
         </div>
       </div>

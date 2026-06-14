@@ -1,7 +1,7 @@
-# SVT KPI Monitor
+# KPI Monitor
 
 **Enterprise KPI Monitoring & Performance Analytics Platform**
-PT. Sentra Visi Teknologi
+PT Chief Level Indonesia
 
 ![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue?logo=typescript)
@@ -12,7 +12,7 @@ PT. Sentra Visi Teknologi
 
 ## Overview
 
-SVT KPI Monitor is a comprehensive Key Performance Indicator tracking system designed for PT. Sentra Visi Teknologi. It provides real-time performance monitoring, role-based access control, and an approval workflow for KPI data submissions across all departments.
+KPI Monitor is a comprehensive Key Performance Indicator tracking system designed for PT Chief Level Indonesia. It provides real-time performance monitoring, role-based access control, and an approval workflow for KPI data submissions across all departments.
 
 ### Key Features
 
@@ -133,10 +133,10 @@ cp .env.local.example .env.local
 ### Create First User
 
 1. Go to Supabase Dashboard → **Authentication** → **Users** → **Add User**
-2. Create a user (e.g., `admin@sentravisi.com` / `Admin123!`)
+2. Create a user (e.g., `admin@chieflevel.co.id` / `Admin123!`)
 3. Run in SQL Editor to give admin role:
 ```sql
-UPDATE profiles SET role = 'admin' WHERE email = 'admin@sentravisi.com';
+UPDATE profiles SET role = 'admin' WHERE email = 'admin@chieflevel.co.id';
 ```
 
 ### Run Development Server
@@ -234,4 +234,4 @@ Receive external reports. Requires `X-OpenClaw-Signature` HMAC header.
 
 ## License
 
-Proprietary — PT. Sentra Visi Teknologi © 2026
+Proprietary — PT Chief Level Indonesia © 2026

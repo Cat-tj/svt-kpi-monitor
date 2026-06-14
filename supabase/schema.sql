@@ -1,5 +1,5 @@
 -- =============================================================================
--- PT. SENTRA VISI TEKNOLOGI - KPI Monitoring System
+-- PT CHIEF LEVEL INDONESIA - KPI Monitoring System
 -- Database Schema & Row-Level Security (RLS) Policies
 -- =============================================================================
 -- Run this in your Supabase SQL Editor (Dashboard > SQL Editor > New Query)
@@ -51,10 +51,16 @@ CREATE TABLE kpis (
   target_value NUMERIC NOT NULL DEFAULT 0,
   weight NUMERIC NOT NULL DEFAULT 1.0 CHECK (weight > 0 AND weight <= 100),
   unit TEXT, -- e.g., '%', 'IDR', 'units'
+  -- Task/project scheduling (for the Activity Calendar)
+  start_date DATE,
+  due_date DATE,
+  assigned_to UUID REFERENCES profiles(id) ON DELETE SET NULL,
   is_active BOOLEAN DEFAULT true,
   created_by UUID REFERENCES profiles(id),
   created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT kpis_schedule_order_chk
+    CHECK (start_date IS NULL OR due_date IS NULL OR due_date >= start_date)
 );
 
 -- Sub-KPIs (breakdown of a parent KPI)
@@ -83,6 +89,8 @@ CREATE TABLE kpi_entries (
   reviewed_by UUID REFERENCES profiles(id),
   reviewed_at TIMESTAMPTZ,
   review_notes TEXT,
+  -- Reviewer-assigned work score 0–100% (set by manager/admin on approval)
+  score NUMERIC CHECK (score IS NULL OR (score >= 0 AND score <= 100)),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   -- Prevent duplicate entries for same KPI/period/user
@@ -121,6 +129,8 @@ CREATE TABLE api_keys (
 CREATE INDEX idx_profiles_department ON profiles(department_id);
 CREATE INDEX idx_profiles_role ON profiles(role);
 CREATE INDEX idx_kpis_department ON kpis(department_id);
+CREATE INDEX idx_kpis_assigned_to ON kpis(assigned_to);
+CREATE INDEX idx_kpis_schedule ON kpis(start_date, due_date);
 CREATE INDEX idx_kpi_entries_kpi ON kpi_entries(kpi_id);
 CREATE INDEX idx_kpi_entries_submitted_by ON kpi_entries(submitted_by);
 CREATE INDEX idx_kpi_entries_status ON kpi_entries(status);

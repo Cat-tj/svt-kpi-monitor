@@ -67,7 +67,7 @@ export async function fetchAllEntries(supabase: AnySupabaseClient, status?: stri
   return query;
 }
 
-export async function approveEntry(supabase: AnySupabaseClient, entryId: string, reviewerId: string, notes?: string) {
+export async function approveEntry(supabase: AnySupabaseClient, entryId: string, reviewerId: string, score?: number | null, notes?: string) {
   return supabase
     .from("kpi_entries")
     .update({
@@ -75,6 +75,7 @@ export async function approveEntry(supabase: AnySupabaseClient, entryId: string,
       reviewed_by: reviewerId,
       reviewed_at: new Date().toISOString(),
       review_notes: notes || null,
+      score: score ?? null,
     } as any)
     .eq("id", entryId);
 }
@@ -87,6 +88,31 @@ export async function rejectEntry(supabase: AnySupabaseClient, entryId: string, 
       reviewed_by: reviewerId,
       reviewed_at: new Date().toISOString(),
       review_notes: notes || "Rejected by reviewer",
+    } as any)
+    .eq("id", entryId);
+}
+
+/**
+ * Update the review decision of an already-reviewed entry.
+ * Lets a reviewer correct a mistaken approve/reject, change the score,
+ * or revert the entry back to "pending".
+ */
+export async function updateEntryDecision(
+  supabase: AnySupabaseClient,
+  entryId: string,
+  reviewerId: string,
+  status: "approved" | "rejected" | "pending",
+  opts?: { score?: number | null; notes?: string }
+) {
+  const isPending = status === "pending";
+  return supabase
+    .from("kpi_entries")
+    .update({
+      status,
+      reviewed_by: isPending ? null : reviewerId,
+      reviewed_at: isPending ? null : new Date().toISOString(),
+      review_notes: isPending ? null : (opts?.notes || null),
+      score: status === "approved" ? (opts?.score ?? null) : null,
     } as any)
     .eq("id", entryId);
 }

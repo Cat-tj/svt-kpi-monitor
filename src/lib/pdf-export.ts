@@ -23,7 +23,7 @@ export function exportKpiReportPDF(
   // Header
   doc.setFontSize(18);
   doc.setTextColor(76, 110, 245);
-  doc.text("PT. Sentra Visi Teknologi", 14, 18);
+  doc.text("PT Chief Level Indonesia", 14, 18);
 
   doc.setFontSize(13);
   doc.setTextColor(33, 37, 41);

@@ -33,6 +33,8 @@ interface MyEntry {
   period_end: string;
   status: string;
   notes: string | null;
+  review_notes: string | null;
+  score: number | null;
   created_at: string;
   kpi: { name: string; target_value: number; unit: string | null } | null;
 }
@@ -61,7 +63,7 @@ export default function MyKpisPage() {
       // Load user's own entries
       const { data: entryData } = await supabase
         .from("kpi_entries")
-        .select("id, actual_value, period_start, period_end, status, notes, created_at, kpi:kpis(name, target_value, unit)")
+        .select("id, actual_value, period_start, period_end, status, notes, review_notes, score, created_at, kpi:kpis(name, target_value, unit)")
         .eq("submitted_by", user.id)
         .order("created_at", { ascending: false })
         .limit(10);
@@ -177,38 +179,65 @@ export default function MyKpisPage() {
             {entries.map((entry) => {
               const achievement = entry.kpi ? Math.min((entry.actual_value / entry.kpi.target_value) * 100, 150) : 0;
               return (
-                <div key={entry.id} className="flex items-center justify-between rounded-lg border border-gray-100 p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-gray-50 flex items-center justify-center">
-                      <Target className="h-4 w-4 text-gray-400" />
+                <div key={entry.id} className="rounded-lg border border-gray-100 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-lg bg-gray-50 flex items-center justify-center">
+                        <Target className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{entry.kpi?.name || "KPI"}</p>
+                        <p className="text-[11px] text-gray-500">
+                          {entry.actual_value} {entry.kpi?.unit || ""} · {entry.period_start} to {entry.period_end}
+                          {entry.kpi && (
+                            <span className="ml-1 text-gray-400">({achievement.toFixed(0)}% of target)</span>
+                          )}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">{entry.kpi?.name || "KPI"}</p>
-                      <p className="text-[11px] text-gray-500">
-                        {entry.actual_value} {entry.kpi?.unit || ""} · {entry.period_start} to {entry.period_end}
-                        {entry.kpi && (
-                          <span className="ml-1 text-gray-400">({achievement.toFixed(0)}% of target)</span>
-                        )}
+                    <div className="flex items-center gap-2">
+                      {entry.status === "approved" && entry.score != null && (
+                        <span className="text-[10px] font-medium bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                          Score: {entry.score}%
+                        </span>
+                      )}
+                      {entry.status === "pending" && (
+                        <span className="flex items-center gap-1 text-[10px] font-medium bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">
+                          <Clock className="h-3 w-3" /> Pending
+                        </span>
+                      )}
+                      {entry.status === "approved" && (
+                        <span className="flex items-center gap-1 text-[10px] font-medium bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full">
+                          <CheckCircle2 className="h-3 w-3" /> Approved
+                        </span>
+                      )}
+                      {entry.status === "rejected" && (
+                        <span className="flex items-center gap-1 text-[10px] font-medium bg-red-50 text-red-600 px-2 py-0.5 rounded-full">
+                          <XCircle className="h-3 w-3" /> Rejected
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {entry.status === "rejected" && (
+                    <div className="mt-2 ml-11 flex items-start gap-1.5 rounded-md bg-red-50 border border-red-100 px-2.5 py-1.5">
+                      <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-[11px] text-red-700">
+                        <span className="font-semibold">Alasan ditolak: </span>
+                        {entry.review_notes || "Tidak ada keterangan dari reviewer."}
                       </p>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {entry.status === "pending" && (
-                      <span className="flex items-center gap-1 text-[10px] font-medium bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">
-                        <Clock className="h-3 w-3" /> Pending
-                      </span>
-                    )}
-                    {entry.status === "approved" && (
-                      <span className="flex items-center gap-1 text-[10px] font-medium bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full">
-                        <CheckCircle2 className="h-3 w-3" /> Approved
-                      </span>
-                    )}
-                    {entry.status === "rejected" && (
-                      <span className="flex items-center gap-1 text-[10px] font-medium bg-red-50 text-red-600 px-2 py-0.5 rounded-full">
-                        <XCircle className="h-3 w-3" /> Rejected
-                      </span>
-                    )}
-                  </div>
+                  )}
+
+                  {entry.status === "approved" && entry.review_notes && (
+                    <div className="mt-2 ml-11 flex items-start gap-1.5 rounded-md bg-emerald-50 border border-emerald-100 px-2.5 py-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-[11px] text-emerald-700">
+                        <span className="font-semibold">Catatan reviewer: </span>
+                        {entry.review_notes}
+                      </p>
+                    </div>
+                  )}
                 </div>
               );
             })}

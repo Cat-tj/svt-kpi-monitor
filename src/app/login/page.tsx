@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { TrendingUp, Loader2 } from "lucide-react";
+import Image from "next/image";
+import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -39,11 +40,16 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Brand */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl gradient-brand">
-            <TrendingUp className="h-6 w-6 text-white" />
-          </div>
-          <h1 className="text-xl font-bold text-gray-900">SVT KPI Monitor</h1>
-          <p className="text-sm text-gray-500 mt-1">PT. Sentra Visi Teknologi</p>
+          <Image
+            src="/logo.png"
+            alt="Etam Daya"
+            width={64}
+            height={64}
+            className="mx-auto mb-4 h-16 w-16 rounded-xl object-contain"
+            priority
+          />
+          <h1 className="text-xl font-bold text-gray-900">KPI Monitor</h1>
+          <p className="text-sm text-gray-500 mt-1">PT Chief Level Indonesia</p>
         </div>
 
         {/* Form */}
@@ -60,7 +66,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@sentravisi.com"
+              placeholder="you@chieflevel.co.id"
               required
               className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none transition-colors focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
             />

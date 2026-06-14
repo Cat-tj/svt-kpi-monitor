@@ -1,4 +1,4 @@
-# AI Integration Blueprint — OpenClaw ↔ SVT KPI Monitor
+# AI Integration Blueprint — OpenClaw ↔ KPI Monitor
 
 ## Architecture Overview
 
@@ -15,7 +15,7 @@
           │                  │                      │
           ▼                  ▼                      ▼
     ┌─────────────────────────────────────────────────────┐
-    │          SVT KPI Monitor (Next.js + Supabase)        │
+    │            KPI Monitor (Next.js + Supabase)          │
     │                                                       │
     │  GET /api/v1/kpi-data      ← Agents READ data        │
     │  POST /api/webhooks/openclaw  ← Agents PUSH reports  │

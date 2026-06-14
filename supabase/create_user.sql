@@ -8,7 +8,7 @@ INSERT INTO auth.users (
   '00000000-0000-0000-0000-000000000000',
   'authenticated',
   'authenticated',
-  'admin@sentravisi.com',
+  'admin@chieflevel.co.id',
   crypt('Admin123!', gen_salt('bf')),
   now(), now(), now(), '',
   '{"provider": "email", "providers": ["email"]}'::jsonb,

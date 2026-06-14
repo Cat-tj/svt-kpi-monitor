@@ -3,7 +3,7 @@ INSERT INTO profiles (id, full_name, email, role)
 VALUES (
   '6bef5500-afc5-4ed2-b1f6-2838c3b2f704',
   'COO Admin',
-  'admin@sentravisi.com',
+  'admin@chieflevel.co.id',
   'admin'
 );
 

@@ -3,7 +3,7 @@ INSERT INTO profiles (id, full_name, email, role, department_id)
 VALUES (
   'daa70758-b062-4e35-82f6-929259040b39',
   'Andi Setiawan',
-  'manager@sentravisi.com',
+  'manager@chieflevel.co.id',
   'manager',
   'a1b2c3d4-0000-0000-0000-000000000001'
 );
@@ -13,7 +13,7 @@ INSERT INTO profiles (id, full_name, email, role, department_id)
 VALUES (
   '581c6b34-fe75-444a-b45a-c7a154705691',
   'Fajar Nugroho',
-  'staff@sentravisi.com',
+  'staff@chieflevel.co.id',
   'staff',
   'a1b2c3d4-0000-0000-0000-000000000001'
 );

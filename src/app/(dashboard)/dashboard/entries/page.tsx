@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, CheckCircle2, XCircle, Plus, Loader2, MessageSquare, Paperclip } from "lucide-react";
+import { Clock, CheckCircle2, XCircle, Plus, Loader2, MessageSquare, Paperclip, Pencil } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
-import { approveEntry, rejectEntry } from "@/lib/supabase/queries";
+import { approveEntry, rejectEntry, updateEntryDecision } from "@/lib/supabase/queries";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { RoleGuard } from "@/components/ui/role-guard";
@@ -19,6 +19,7 @@ interface Entry {
   status: string;
   notes: string | null;
   review_notes: string | null;
+  score: number | null;
   created_at: string;
   kpi: { id: string; name: string; target_value: number; unit: string | null; department_id: string; department: { name: string } | null } | null;
   submitter: { full_name: string; email: string } | null;
@@ -42,7 +43,17 @@ function EntriesContent() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [rejectNotes, setRejectNotes] = useState<Record<string, string>>({});
   const [showRejectInput, setShowRejectInput] = useState<string | null>(null);
+  const [showApproveInput, setShowApproveInput] = useState<string | null>(null);
+  const [approveScore, setApproveScore] = useState<Record<string, number>>({});
+  const [approveNotes, setApproveNotes] = useState<Record<string, string>>({});
   const [confirmAction, setConfirmAction] = useState<{ id: string; action: "approve" | "reject" } | null>(null);
+
+  // Edit-review panel (for already-decided entries)
+  const [editReviewId, setEditReviewId] = useState<string | null>(null);
+  const [editStatus, setEditStatus] = useState<"approved" | "rejected" | "pending">("approved");
+  const [editScore, setEditScore] = useState(100);
+  const [editNotes, setEditNotes] = useState("");
+  const [savingReview, setSavingReview] = useState(false);
 
   async function loadEntries() {
     if (!user) return;
@@ -76,10 +87,12 @@ function EntriesContent() {
     if (!user) return;
     setActionLoading(entryId);
     const supabase = createClient();
-    const { error } = await approveEntry(supabase, entryId, user.id);
+    const score = approveScore[entryId] ?? 100;
+    const { error } = await approveEntry(supabase, entryId, user.id, score, approveNotes[entryId]);
     if (!error) {
       setEntries((prev) => prev.filter((e) => e.id !== entryId));
-      toast("Entry approved successfully", "success");
+      toast(`Entry approved with score ${score}%`, "success");
+      setShowApproveInput(null);
     } else {
       toast("Failed to approve: " + (error as any).message, "error");
     }
@@ -101,6 +114,35 @@ function EntriesContent() {
     }
     setActionLoading(null);
     setConfirmAction(null);
+  }
+
+  function openEditReview(entry: Entry) {
+    setEditReviewId(entry.id);
+    setEditStatus(entry.status as "approved" | "rejected" | "pending");
+    setEditScore(entry.score ?? 100);
+    setEditNotes(entry.review_notes ?? "");
+  }
+
+  async function handleSaveReview(entryId: string) {
+    if (!user) return;
+    if (editStatus === "rejected" && !editNotes.trim()) {
+      toast("Rejection reason is required", "error");
+      return;
+    }
+    setSavingReview(true);
+    const supabase = createClient();
+    const { error } = await updateEntryDecision(supabase, entryId, user.id, editStatus, {
+      score: editScore,
+      notes: editNotes,
+    });
+    if (!error) {
+      toast("Review updated", "success");
+      setEditReviewId(null);
+      await loadEntries();
+    } else {
+      toast("Failed to update: " + (error as any).message, "error");
+    }
+    setSavingReview(false);
   }
 
   if (loading) {
@@ -191,22 +233,134 @@ function EntriesContent() {
 
                     {entry.status === "pending" && (
                       <div className="flex items-center gap-1.5 mt-1">
-                        <button onClick={() => setConfirmAction({ id: entry.id, action: "approve" })} disabled={actionLoading === entry.id} className="rounded-md px-2.5 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 disabled:opacity-50">
+                        <button onClick={() => { setShowApproveInput(showApproveInput === entry.id ? null : entry.id); setShowRejectInput(null); }} disabled={actionLoading === entry.id} className="rounded-md px-2.5 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 disabled:opacity-50">
                           ✓ Approve
                         </button>
-                        <button onClick={() => setShowRejectInput(showRejectInput === entry.id ? null : entry.id)} disabled={actionLoading === entry.id} className="rounded-md px-2.5 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 disabled:opacity-50">
+                        <button onClick={() => { setShowRejectInput(showRejectInput === entry.id ? null : entry.id); setShowApproveInput(null); }} disabled={actionLoading === entry.id} className="rounded-md px-2.5 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 disabled:opacity-50">
                           ✗ Reject
                         </button>
                       </div>
                     )}
+
+                    {entry.status === "approved" && entry.score != null && (
+                      <span className={cn("text-[11px] font-medium px-2 py-0.5 rounded-full border",
+                        entry.score >= 100 ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                        entry.score >= 75 ? "bg-blue-50 text-blue-700 border-blue-200" :
+                        entry.score >= 50 ? "bg-amber-50 text-amber-700 border-amber-200" :
+                        "bg-red-50 text-red-700 border-red-200"
+                      )}>
+                        Score: {entry.score}%
+                      </span>
+                    )}
+
+                    {entry.status !== "pending" && (
+                      <button onClick={() => editReviewId === entry.id ? setEditReviewId(null) : openEditReview(entry)} disabled={savingReview} className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-gray-500 hover:text-brand-600 hover:bg-brand-50 border border-gray-200 transition-colors disabled:opacity-50">
+                        <Pencil className="h-3 w-3" /> Edit decision
+                      </button>
+                    )}
                   </div>
                 </div>
+
+                {editReviewId === entry.id && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+                    <label className="text-xs font-medium text-gray-600">Change decision</label>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {([
+                        { val: "approved", label: "✓ Approved", on: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+                        { val: "rejected", label: "✗ Rejected", on: "bg-red-50 text-red-700 border-red-200" },
+                        { val: "pending", label: "↺ Back to pending", on: "bg-amber-50 text-amber-700 border-amber-200" },
+                      ] as const).map((opt) => (
+                        <button
+                          key={opt.val}
+                          type="button"
+                          onClick={() => setEditStatus(opt.val)}
+                          className={cn("rounded-md px-2.5 py-1 text-[11px] font-medium border transition-colors",
+                            editStatus === opt.val ? opt.on : "text-gray-500 border-gray-200 hover:bg-gray-50")}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {editStatus === "approved" && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs text-gray-500">Work score</label>
+                          <span className="text-sm font-semibold text-emerald-700">{editScore}%</span>
+                        </div>
+                        <input type="range" min={0} max={100} step={5} value={editScore} onChange={(e) => setEditScore(Number(e.target.value))} className="w-full accent-emerald-500" />
+                      </div>
+                    )}
+
+                    {editStatus !== "pending" && (
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <input
+                          type="text"
+                          placeholder={editStatus === "rejected" ? "Reason for rejection (required)..." : "Note (optional)..."}
+                          value={editNotes}
+                          onChange={(e) => setEditNotes(e.target.value)}
+                          className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-brand-300"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => setEditReviewId(null)} disabled={savingReview} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</button>
+                      <button onClick={() => handleSaveReview(entry.id)} disabled={savingReview || (editStatus === "rejected" && !editNotes.trim())} className="rounded-lg gradient-brand text-white px-3 py-1.5 text-xs font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed">
+                        {savingReview ? "Saving..." : "Save"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {showApproveInput === entry.id && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-gray-600">Work score — does it meet the target?</label>
+                      <span className="text-sm font-semibold text-emerald-700">{approveScore[entry.id] ?? 100}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={approveScore[entry.id] ?? 100}
+                      onChange={(e) => setApproveScore((prev) => ({ ...prev, [entry.id]: Number(e.target.value) }))}
+                      className="w-full accent-emerald-500"
+                    />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {[50, 75, 90, 100].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setApproveScore((prev) => ({ ...prev, [entry.id]: preset }))}
+                          className={cn(
+                            "rounded-md px-2 py-1 text-[11px] font-medium border transition-colors",
+                            (approveScore[entry.id] ?? 100) === preset
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "text-gray-500 border-gray-200 hover:bg-gray-50"
+                          )}
+                        >
+                          {preset === 100 ? "100% (Sesuai penuh)" : `${preset}%`}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <input type="text" placeholder="Approval note (optional)..." value={approveNotes[entry.id] || ""} onChange={(e) => setApproveNotes((prev) => ({ ...prev, [entry.id]: e.target.value }))} className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-emerald-300" />
+                      <button onClick={() => setConfirmAction({ id: entry.id, action: "approve" })} disabled={actionLoading === entry.id} className="rounded-lg bg-emerald-500 text-white px-3 py-1.5 text-xs font-medium hover:bg-emerald-600 disabled:opacity-50">
+                        Confirm
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {showRejectInput === entry.id && (
                   <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
                     <MessageSquare className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                    <input type="text" placeholder="Reason for rejection..." value={rejectNotes[entry.id] || ""} onChange={(e) => setRejectNotes((prev) => ({ ...prev, [entry.id]: e.target.value }))} className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-red-300" />
-                    <button onClick={() => setConfirmAction({ id: entry.id, action: "reject" })} className="rounded-lg bg-red-500 text-white px-3 py-1.5 text-xs font-medium hover:bg-red-600">
+                    <input type="text" placeholder="Reason for rejection (required)..." value={rejectNotes[entry.id] || ""} onChange={(e) => setRejectNotes((prev) => ({ ...prev, [entry.id]: e.target.value }))} className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-red-300" />
+                    <button onClick={() => setConfirmAction({ id: entry.id, action: "reject" })} disabled={!rejectNotes[entry.id]?.trim()} className="rounded-lg bg-red-500 text-white px-3 py-1.5 text-xs font-medium hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed">
                       Confirm
                     </button>
                   </div>
@@ -221,7 +375,7 @@ function EntriesContent() {
       <ConfirmDialog
         open={!!confirmAction}
         title={confirmAction?.action === "approve" ? "Approve Entry" : "Reject Entry"}
-        message={confirmAction?.action === "approve" ? "Are you sure you want to approve this entry? This action cannot be undone." : "Are you sure you want to reject this entry? The staff member will be notified."}
+        message={confirmAction?.action === "approve" ? `Approve this entry with a work score of ${confirmAction ? (approveScore[confirmAction.id] ?? 100) : 100}%? This will be recorded and cannot be undone.` : "Are you sure you want to reject this entry? The staff member will be notified."}
         confirmLabel={confirmAction?.action === "approve" ? "Approve" : "Reject"}
         variant={confirmAction?.action === "reject" ? "danger" : "default"}
         onConfirm={() => {
