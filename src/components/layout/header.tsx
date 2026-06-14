@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Bell, Search, ChevronDown, User, LogOut, Settings } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
+import { MobileNav } from "./mobile-nav";
 
 export function Header() {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -15,15 +16,18 @@ export function Header() {
     : "..";
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-surface px-6">
-      {/* Search */}
-      <div className="flex items-center gap-3 rounded-lg bg-surface-tertiary px-3 py-2 w-80">
+    <header className="flex h-16 items-center justify-between border-b border-border bg-surface px-4 lg:px-6">
+      {/* Mobile menu + Search */}
+      <div className="flex items-center gap-3">
+        <MobileNav />
+        <div className="hidden sm:flex items-center gap-3 rounded-lg bg-surface-tertiary px-3 py-2 w-64 lg:w-80">
         <Search className="h-4 w-4 text-gray-400" />
         <input
           type="text"
           placeholder="Search KPIs, departments..."
           className="flex-1 bg-transparent text-sm text-gray-700 placeholder:text-gray-400 outline-none"
         />
+        </div>
       </div>
 
       {/* Right actions */}

@@ -7,6 +7,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 export const metadata: Metadata = {
   title: "SVT KPI Monitor | PT. Sentra Visi Teknologi",
   description: "Enterprise KPI Monitoring & Performance Analytics Platform",
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({

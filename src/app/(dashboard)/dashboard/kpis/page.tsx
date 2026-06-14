@@ -2,10 +2,13 @@
 
 import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
-import { Target, Plus, Search, Loader2, X } from "lucide-react";
+import { Target, Plus, Search, Loader2, X, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Kpi {
   id: string;
@@ -33,6 +36,8 @@ export default function KpisPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Create form state
   const [newName, setNewName] = useState("");
@@ -85,9 +90,25 @@ export default function KpisPage() {
     if (!error) {
       setShowCreateForm(false);
       setNewName(""); setNewDesc(""); setNewDept(""); setNewTarget(""); setNewUnit("");
+      toast("KPI created successfully", "success");
       await loadData();
+    } else {
+      toast("Failed to create KPI", "error");
     }
     setCreating(false);
+  }
+
+  async function handleDeleteKpi() {
+    if (!deleteId) return;
+    const supabase = createClient();
+    const { error } = await (supabase.from("kpis") as any).update({ is_active: false }).eq("id", deleteId);
+    if (!error) {
+      toast("KPI deactivated", "success");
+      await loadData();
+    } else {
+      toast("Failed to delete: " + error.message, "error");
+    }
+    setDeleteId(null);
   }
 
   const filtered = kpis.filter((kpi) =>
@@ -193,13 +214,14 @@ export default function KpisPage() {
               <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase">Target</th>
               <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase">Timeframe</th>
               <th className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase">Weight</th>
+              {isAdmin && <th className="px-5 py-3"></th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {filtered.map((kpi) => (
               <tr key={kpi.id} data-animate="row" className="hover:bg-gray-50/50 transition-colors">
                 <td className="px-5 py-3.5">
-                  <span className="text-sm font-medium text-gray-800">{kpi.name}</span>
+                  <Link href={`/dashboard/kpis/${kpi.id}`} className="text-sm font-medium text-gray-800 hover:text-brand-600 transition-colors">{kpi.name}</Link>
                   {kpi.description && <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-xs">{kpi.description}</p>}
                 </td>
                 <td className="px-5 py-3.5">
@@ -209,6 +231,13 @@ export default function KpisPage() {
                 <td className="px-5 py-3.5 text-sm text-gray-700 font-mono">{kpi.target_value} {kpi.unit || ""}</td>
                 <td className="px-5 py-3.5 text-xs text-gray-600 capitalize">{kpi.timeframe}</td>
                 <td className="px-5 py-3.5 text-xs text-gray-600">{kpi.weight}%</td>
+                {isAdmin && (
+                  <td className="px-5 py-3.5">
+                    <button onClick={() => setDeleteId(kpi.id)} className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -217,6 +246,17 @@ export default function KpisPage() {
           <p className="text-sm text-gray-500 text-center py-8">No KPIs found.</p>
         )}
       </div>
+
+      {/* Delete Confirm */}
+      <ConfirmDialog
+        open={!!deleteId}
+        title="Deactivate KPI"
+        message="This will hide the KPI from all users. Existing entries will be preserved. Continue?"
+        confirmLabel="Deactivate"
+        variant="danger"
+        onConfirm={handleDeleteKpi}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   );
 }

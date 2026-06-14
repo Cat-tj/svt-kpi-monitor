@@ -2,16 +2,19 @@
 
 import { useRef, useEffect, useState } from "react";
 import gsap from "gsap";
-import {
-  Settings,
-  Shield,
-  Bell,
-  Palette,
-  Database,
-} from "lucide-react";
+import { Shield, Bell, Palette, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RoleGuard } from "@/components/ui/role-guard";
 
 export default function SettingsPage() {
+  return (
+    <RoleGuard allowed={["admin"]}>
+      <SettingsContent />
+    </RoleGuard>
+  );
+}
+
+function SettingsContent() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState("notifications");
 

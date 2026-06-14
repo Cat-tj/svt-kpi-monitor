@@ -6,6 +6,8 @@ import { Building2, Plus, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
+import { RoleGuard } from "@/components/ui/role-guard";
+import { useToast } from "@/components/ui/toast";
 
 interface Department {
   id: string;
@@ -15,8 +17,17 @@ interface Department {
 }
 
 export default function DepartmentsPage() {
+  return (
+    <RoleGuard allowed={["admin"]}>
+      <DepartmentsContent />
+    </RoleGuard>
+  );
+}
+
+function DepartmentsContent() {
   const containerRef = useRef<HTMLDivElement>(null);
   const { isAdmin } = useAuth();
+  const { toast } = useToast();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
