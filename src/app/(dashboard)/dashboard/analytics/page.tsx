@@ -68,6 +68,14 @@ export default function AnalyticsPage() {
     });
   }, [entries, filterMode, selectedMonth, selectedYear, rangeStart, rangeEnd]);
 
+  // Available years from data (must be before any early return — Rules of Hooks)
+  const years = useMemo(() => {
+    const set = new Set<number>();
+    entries.forEach((e) => set.add(new Date(e.period_end || e.created_at).getFullYear()));
+    set.add(new Date().getFullYear());
+    return Array.from(set).sort((a, b) => b - a);
+  }, [entries]);
+
   if (loading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 text-brand-500 animate-spin" /></div>;
   }
@@ -93,14 +101,6 @@ export default function AnalyticsPage() {
     : rangeStart && rangeEnd
       ? `${rangeStart} → ${rangeEnd}`
       : "All data";
-
-  // Available years from data
-  const years = useMemo(() => {
-    const set = new Set<number>();
-    entries.forEach((e) => set.add(new Date(e.period_end || e.created_at).getFullYear()));
-    set.add(new Date().getFullYear());
-    return Array.from(set).sort((a, b) => b - a);
-  }, [entries]);
 
   function buildReportRows() {
     return filteredEntries.map((e) => {
