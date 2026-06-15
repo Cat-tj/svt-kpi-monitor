@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useI18n } from "@/lib/i18n";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -12,6 +13,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const { t } = useI18n();
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -59,7 +61,7 @@ export default function LoginPage() {
         >
           <div>
             <label className="text-xs font-medium text-gray-700" htmlFor="email">
-              Email
+              {t("email")}
             </label>
             <input
               id="email"
@@ -73,7 +75,7 @@ export default function LoginPage() {
           </div>
           <div>
             <label className="text-xs font-medium text-gray-700" htmlFor="password">
-              Password
+              {t("password")}
             </label>
             <input
               id="password"
@@ -98,7 +100,7 @@ export default function LoginPage() {
             className="w-full rounded-lg gradient-brand px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? t("signing_in") : t("sign_in")}
           </button>
 
           <button
@@ -115,12 +117,12 @@ export default function LoginPage() {
             }}
             className="w-full text-center text-xs text-brand-600 hover:text-brand-700 font-medium"
           >
-            Forgot password?
+            {t("forgot_password")}
           </button>
         </form>
 
         <p className="mt-4 text-center text-[11px] text-gray-400">
-          Enterprise access only. Contact IT for credentials.
+          {t("enterprise_access")}
         </p>
       </div>
     </div>

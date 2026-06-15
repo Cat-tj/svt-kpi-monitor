@@ -23,36 +23,38 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import { useI18n } from "@/lib/i18n";
 
 interface NavItem {
-  name: string;
+  key: string;
   href: string;
   icon: typeof LayoutDashboard;
   roles: Array<"admin" | "manager" | "staff">;
 }
 
 const navigation: NavItem[] = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin", "manager", "staff"] },
-  { name: "Calendar", href: "/dashboard/calendar", icon: CalendarDays, roles: ["admin", "manager", "staff"] },
-  { name: "My KPIs", href: "/dashboard/my-kpis", icon: BarChart3, roles: ["staff", "manager"] },
-  { name: "Submit Entry", href: "/dashboard/entries/new", icon: PlusCircle, roles: ["staff", "manager"] },
-  { name: "KPI Metrics", href: "/dashboard/kpis", icon: Target, roles: ["admin", "manager"] },
-  { name: "Submissions", href: "/dashboard/entries", icon: ClipboardCheck, roles: ["admin", "manager"] },
-  { name: "Departments", href: "/dashboard/departments", icon: Building2, roles: ["admin"] },
-  { name: "Team", href: "/dashboard/team", icon: Users, roles: ["admin", "manager"] },
-  { name: "Analytics", href: "/dashboard/analytics", icon: TrendingUp, roles: ["admin", "manager"] },
-  { name: "Templates", href: "/dashboard/templates", icon: Layers, roles: ["admin", "manager"] },
-  { name: "Notifications", href: "/dashboard/notifications", icon: Bell, roles: ["admin", "manager", "staff"] },
-  { name: "Announcements", href: "/dashboard/announcements", icon: Megaphone, roles: ["admin", "manager", "staff"] },
-  { name: "Profile", href: "/dashboard/profile", icon: User, roles: ["admin", "manager", "staff"] },
-  { name: "System", href: "/dashboard/system", icon: Server, roles: ["admin"] },
-  { name: "Changelog", href: "/dashboard/changelog", icon: FileText, roles: ["admin", "manager", "staff"] },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings, roles: ["admin"] },
+  { key: "dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin", "manager", "staff"] },
+  { key: "calendar", href: "/dashboard/calendar", icon: CalendarDays, roles: ["admin", "manager", "staff"] },
+  { key: "my_kpis", href: "/dashboard/my-kpis", icon: BarChart3, roles: ["staff", "manager"] },
+  { key: "submit_entry", href: "/dashboard/entries/new", icon: PlusCircle, roles: ["staff", "manager"] },
+  { key: "kpi_metrics", href: "/dashboard/kpis", icon: Target, roles: ["admin", "manager"] },
+  { key: "submissions", href: "/dashboard/entries", icon: ClipboardCheck, roles: ["admin", "manager"] },
+  { key: "departments", href: "/dashboard/departments", icon: Building2, roles: ["admin"] },
+  { key: "team", href: "/dashboard/team", icon: Users, roles: ["admin", "manager"] },
+  { key: "analytics", href: "/dashboard/analytics", icon: TrendingUp, roles: ["admin", "manager"] },
+  { key: "templates", href: "/dashboard/templates", icon: Layers, roles: ["admin", "manager"] },
+  { key: "notifications", href: "/dashboard/notifications", icon: Bell, roles: ["admin", "manager", "staff"] },
+  { key: "announcements", href: "/dashboard/announcements", icon: Megaphone, roles: ["admin", "manager", "staff"] },
+  { key: "profile", href: "/dashboard/profile", icon: User, roles: ["admin", "manager", "staff"] },
+  { key: "system", href: "/dashboard/system", icon: Server, roles: ["admin"] },
+  { key: "changelog", href: "/dashboard/changelog", icon: FileText, roles: ["admin", "manager", "staff"] },
+  { key: "settings", href: "/dashboard/settings", icon: Settings, roles: ["admin"] },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const { user, loading } = useAuth();
+  const { t } = useI18n();
 
   const userRole = user?.role || "staff";
   const filteredNav = navigation.filter((item) => item.roles.includes(userRole));
@@ -87,10 +89,12 @@ export function Sidebar() {
           </div>
         ) : (
           filteredNav.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const isActive = item.href === "/dashboard"
+              ? pathname === "/dashboard"
+              : pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
-                key={item.name}
+                key={item.key}
                 href={item.href}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
@@ -105,7 +109,7 @@ export function Sidebar() {
                     isActive ? "text-brand-600" : "text-gray-400"
                   )}
                 />
-                {item.name}
+                {t(item.key)}
               </Link>
             );
           })
