@@ -8,6 +8,7 @@ export type UserRole = "admin" | "manager" | "staff";
 export type KpiType = "percentage" | "currency" | "numerical";
 export type KpiTimeframe = "weekly" | "monthly" | "annually";
 export type EntryStatus = "pending" | "approved" | "rejected";
+export type EntryPriority = "low" | "medium" | "high" | "critical";
 
 export interface Database {
   public: {
@@ -156,6 +157,9 @@ export interface Database {
           reviewed_at: string | null;
           review_notes: string | null;
           score: number | null;
+          issue: string | null;
+          priority: "low" | "medium" | "high" | "critical" | null;
+          output: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -169,6 +173,9 @@ export interface Database {
           actual_value: number;
           notes?: string | null;
           status?: EntryStatus;
+          issue?: string | null;
+          priority?: "low" | "medium" | "high" | "critical" | null;
+          output?: string | null;
         };
         Update: {
           actual_value?: number;
@@ -178,6 +185,9 @@ export interface Database {
           reviewed_at?: string | null;
           review_notes?: string | null;
           score?: number | null;
+          issue?: string | null;
+          priority?: "low" | "medium" | "high" | "critical" | null;
+          output?: string | null;
         };
       };
       ai_reports: {

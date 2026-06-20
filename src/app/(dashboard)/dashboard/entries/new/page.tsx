@@ -27,6 +27,9 @@ export default function NewEntryPage() {
   const [endDate, setEndDate] = useState("");
   const [actualValue, setActualValue] = useState("");
   const [notes, setNotes] = useState("");
+  const [issue, setIssue] = useState("");
+  const [priority, setPriority] = useState("");
+  const [output, setOutput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -100,6 +103,9 @@ export default function NewEntryPage() {
       period_end: endDate,
       actual_value: numValue,
       notes: notes || null,
+      issue: issue || null,
+      priority: priority || null,
+      output: output || null,
     } as any).select().single();
 
     if (insertError) {
@@ -136,7 +142,7 @@ export default function NewEntryPage() {
     }
 
     toast("Entry submitted successfully! Waiting for approval.", "success");
-    setSelectedKpi(""); setStartDate(""); setEndDate(""); setActualValue(""); setNotes(""); setFiles([]);
+    setSelectedKpi(""); setStartDate(""); setEndDate(""); setActualValue(""); setNotes(""); setIssue(""); setPriority(""); setOutput(""); setFiles([]);
     setLoading(false);
   }
 
@@ -206,6 +212,39 @@ export default function NewEntryPage() {
             Notes (optional)
           </label>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add context..." rows={3} className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 resize-none" />
+        </div>
+
+        {/* Output / Outcome */}
+        <div data-animate="field" className="rounded-xl border border-border bg-surface p-5 shadow-card">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+            <ClipboardCheck className="h-4 w-4 text-gray-400" />
+            Output / Outcome
+          </label>
+          <textarea value={output} onChange={(e) => setOutput(e.target.value)} placeholder="Hasil/output yang dicapai dari aktivitas ini..." rows={3} className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 resize-none" />
+        </div>
+
+        {/* Issue & Priority */}
+        <div data-animate="field" className="rounded-xl border border-border bg-surface p-5 shadow-card">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+            <FileText className="h-4 w-4 text-gray-400" />
+            Issue & Priority (optional)
+          </label>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Issue / Kendala</label>
+              <textarea value={issue} onChange={(e) => setIssue(e.target.value)} placeholder="Masalah yang ditemukan selama pengerjaan..." rows={2} className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 resize-none" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Priority</label>
+              <select value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100">
+                <option value="">— No priority —</option>
+                <option value="low">Low Priority</option>
+                <option value="medium">Medium Priority</option>
+                <option value="high">High Priority</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Evidence Attachments */}
