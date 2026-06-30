@@ -7,7 +7,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Only protect dashboard routes, skip login, api, static, and auth routes
     "/dashboard/:path*",
   ],
 };
