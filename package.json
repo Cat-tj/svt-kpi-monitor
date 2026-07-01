@@ -12,14 +12,17 @@
   "dependencies": {
     "@supabase/ssr": "^0.5.1",
     "@supabase/supabase-js": "^2.45.0",
+    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "file-saver": "^2.0.5",
     "gsap": "^3.12.5",
+    "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.436.0",
+    "mysql2": "^3.22.5",
     "next": "^14.2.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -28,7 +31,9 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/file-saver": "^2.0.7",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.2.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",

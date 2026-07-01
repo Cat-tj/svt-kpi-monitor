@@ -1,40 +1,41 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Loader2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { useI18n } from "@/lib/i18n";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
-  const { t } = useI18n();
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const supabase = createClient();
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+      const data = await res.json();
 
-    if (error) {
-      setError(error.message);
+      if (!res.ok) {
+        setError(data.error || "Login failed");
+        setLoading(false);
+        return;
+      }
+
+      // Hard redirect to ensure middleware picks up the new cookie
+      window.location.href = "/dashboard";
+    } catch {
+      setError("Network error. Please try again.");
       setLoading(false);
-      return;
     }
-
-    // Hard redirect to ensure middleware picks up the new session
-    window.location.href = "/dashboard";
   }
 
   return (
@@ -61,7 +62,7 @@ export default function LoginPage() {
         >
           <div>
             <label className="text-xs font-medium text-gray-700" htmlFor="email">
-              {t("email")}
+              Email
             </label>
             <input
               id="email"
@@ -75,7 +76,7 @@ export default function LoginPage() {
           </div>
           <div>
             <label className="text-xs font-medium text-gray-700" htmlFor="password">
-              {t("password")}
+              Password
             </label>
             <input
               id="password"
@@ -100,29 +101,12 @@ export default function LoginPage() {
             className="w-full rounded-lg gradient-brand px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            {loading ? t("signing_in") : t("sign_in")}
-          </button>
-
-          <button
-            type="button"
-            onClick={async () => {
-              if (!email) { setError("Enter your email first"); return; }
-              const supabase = createClient();
-              const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/auth/callback`,
-              });
-              if (resetErr) setError(resetErr.message);
-              else setError("");
-              alert(resetErr ? resetErr.message : "Password reset link sent to your email!");
-            }}
-            className="w-full text-center text-xs text-brand-600 hover:text-brand-700 font-medium"
-          >
-            {t("forgot_password")}
+            {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
         <p className="mt-4 text-center text-[11px] text-gray-400">
-          {t("enterprise_access")}
+          Enterprise access only. Contact IT for credentials.
         </p>
       </div>
     </div>

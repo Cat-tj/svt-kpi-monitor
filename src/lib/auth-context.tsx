@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import type { UserRole } from "@/lib/database.types";
+
+export type UserRole = "admin" | "manager" | "staff";
 
 interface UserProfile {
   id: string;
@@ -38,23 +38,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function loadUser() {
       try {
-        const supabase = createClient();
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-
-        if (!authUser) {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+        } else {
           setUser(null);
-          setLoading(false);
-          return;
-        }
-
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id, full_name, email, role, department_id, avatar_url")
-          .eq("id", authUser.id)
-          .single();
-
-        if (profile) {
-          setUser(profile as UserProfile);
         }
       } catch {
         setUser(null);
@@ -62,13 +51,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     }
-
     loadUser();
   }, []);
 
   async function logout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await fetch("/api/auth/logout", { method: "POST" });
     window.location.href = "/login";
   }
 
